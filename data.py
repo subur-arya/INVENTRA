@@ -529,4 +529,3 @@ def analisis(data, mapping):
             print(f"Sheet dibuat: {key_name}")
 
     return data
-

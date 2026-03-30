@@ -107,6 +107,7 @@ class MappingDialog:
         """Load settings dari JSON"""
         default_settings = {
             "data_mappings": {
+                "PLJM01": {"source_file_id": None, "sheet_name": None, "columns": {}},
                 "PLJM08": {"source_file_id": None, "sheet_name": None, "columns": {}},
                 "SRD": {"source_file_id": None, "sheet_name": None, "columns": {}},
                 "SLN": {"source_file_id": None, "sheet_name": None, "columns": {}},
@@ -192,7 +193,7 @@ class MappingDialog:
         self.notebook.pack(fill="both", expand=True)
         
         # Create tabs for each data type
-        data_types = ["PLJM08", "SRD", "SLN", "IR", "PO", "LEVERING", "ANALISIS"]
+        data_types = ["PLJM01", "PLJM08", "SRD", "SLN", "IR", "PO", "LEVERING", "ANALISIS"]
         self.widgets = {}
         
         for data_type in data_types:
@@ -482,13 +483,15 @@ class MappingDialog:
     def get_column_config(self, data_type):
         """Get column configuration for each data type"""
         configs = {
+            "PLJM01": [
+                ("stock_code", "Stock Code", "Stock Code"),
+                ("rop", "ROP", "ROP"),
+                ("roq", "ROQ", "ROQ"),
+            ],
             "PLJM08": [
                 ("stock_code", "Stock Code", "Stock Code"),
                 ("item_name", "Item Name", "Item Name"),
-                ("soh_akhir", "SOH Akhir", "SOH Akhir"),
-                ("rop", "ROP", "ROP"),
-                ("roq", "ROQ", "ROQ"),
-                ("exp", "EXP", "EXP")
+                ("soh_akhir", "SOH Akhir", "SOH Akhir")
             ],
             "SRD": [
                 ("stock_code", "Stock Code", "STOCK_CODE"),
@@ -603,6 +606,7 @@ class ModernRedINVENTRAManager:
         
         # Data store untuk data yang sudah dimapping
         self.data_store = {
+            "PLJM01": None,
             "PLJM08": None,
             "SRD": None,
             "SLN": None,
@@ -872,10 +876,13 @@ class ModernRedINVENTRAManager:
     DEFAULT_JSON = {
         "uploaded_files": {},
         "data_mappings": {
+            "PLJM01":   {"source_file_id": None, "sheet_name": None, "columns": {
+                "stock_code": "Stock Code", "rop": "ROP",
+                "roq": "ROQ"
+            }},
             "PLJM08":   {"source_file_id": None, "sheet_name": None, "columns": {
                 "stock_code": "Stock Code", "item_name": "Item Name",
-                "soh_akhir": "SOH Akhir",  "rop": "ROP",
-                "roq": "ROQ",              "exp": "EXP"
+                "soh_akhir": "SOH Akhir"
             }},
             "SRD":      {"source_file_id": None, "sheet_name": None, "columns": {
                 "stock_code": "STOCK_CODE", "qty_rcv_uop": "QTY_RCV_UOP",
