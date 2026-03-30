@@ -513,6 +513,7 @@ def analisis_non_setting(data, mapping):
 
     # Susun kolom sesuai header yang diminta
     df_analisis = pd.DataFrame(index=df_filter.index)
+    df_analisis["Distric"]      = df_filter[col(mapping, "PLJM08", "distric")]
     df_analisis["Suplier Name"] = df_filter["Suplier Name"]
     df_analisis["Stock Code"]   = df_filter[col(mapping, "PLJM08", "stock_code")]
     df_analisis["Item Name"]    = df_filter[col(mapping, "PLJM08", "item_name")]

@@ -490,6 +490,7 @@ class MappingDialog:
                 ("roq", "ROQ", "ROQ"),
             ],
             "PLJM08": [
+                ("distric", "Distric", "Distric"),
                 ("stock_code", "Stock Code", "Stock Code"),
                 ("item_name", "Item Name", "Item Name"),
                 ("soh_akhir", "SOH Akhir", "SOH Akhir"),
@@ -2050,6 +2051,39 @@ class ModernRedINVENTRAManager:
             if k not in ("PLJM01",)
         }
 
+        # Ambil tanggal previous result dari sheet COVER cell C7
+        analisis_file_date = None
+        try:
+            ns_file_id = None
+            if os.path.exists("INVENTRA.json"):
+                with open("INVENTRA.json", "r") as f:
+                    _cfg = json.load(f)
+                ns_file_id = _cfg.get("data_mappings", {}).get("ANALISIS NON SETTING", {}).get("source_file_id")
+
+            if ns_file_id and ns_file_id in self.uploaded_files:
+                ns_file_path = self.uploaded_files[ns_file_id].get("path")
+                if ns_file_path and os.path.exists(ns_file_path):
+                    from openpyxl import load_workbook
+                    wb_prev = load_workbook(ns_file_path, read_only=True, data_only=True)
+                    cover_sheet_name = next(
+                        (s for s in wb_prev.sheetnames if "COVER" in s.upper()), None
+                    )
+                    if cover_sheet_name:
+                        ws_prev = wb_prev[cover_sheet_name]
+                        cell_val = ws_prev["C7"].value
+                        if isinstance(cell_val, datetime):
+                            analisis_file_date = cell_val
+                        elif cell_val:
+                            # Format: '30 March 2026  |  14:53 WIB' — ambil bagian sebelum '|'
+                            raw = str(cell_val).split("|")[0].strip()
+                            analisis_file_date = pd.to_datetime(raw, dayfirst=True, errors="coerce")
+                            if pd.isna(analisis_file_date):
+                                analisis_file_date = None
+                    wb_prev.close()
+        except Exception as e:
+            print(f"[WARN] Gagal baca tanggal previous result: {e}")
+            analisis_file_date = None
+
         # Disable save button if exists
         if hasattr(self, "btn_save"):
             self.btn_save.config(state="disabled")
@@ -2058,7 +2092,7 @@ class ModernRedINVENTRAManager:
 
         thread = threading.Thread(
             target=self._save_excel_thread,
-            args=(file_path, data_copy),
+            args=(file_path, data_copy, analisis_file_date),
             daemon=True
         )
         thread.start()
@@ -2066,7 +2100,7 @@ class ModernRedINVENTRAManager:
     # ==============================
     # THREAD WORKER
     # ==============================
-    def _save_excel_thread(self, file_path, data_store):
+    def _save_excel_thread(self, file_path, data_store, analisis_file_date=None):
         try:
             from openpyxl import Workbook
             from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -2115,8 +2149,10 @@ class ModernRedINVENTRAManager:
                 return cell
 
             # ── COVER SHEET ──────────────────────────────────────
-            def write_cover(ws, ds):
+            def write_cover(ws, ds, now=None):
                 from openpyxl.worksheet.page import PageMargins
+                if now is None:
+                    now = datetime.now()
                 ws.sheet_view.showGridLines     = False
                 ws.sheet_view.showRowColHeaders = False
 
@@ -2254,7 +2290,9 @@ class ModernRedINVENTRAManager:
                      bg=RED_DARK, halign="center", italic=True)
 
             # ── DATA SHEET (ultra-fast: style header only, data raw) ──
-            def write_styled_sheet(ws, df, title):
+            def write_styled_sheet(ws, df, title, now=None):
+                if now is None:
+                    now = datetime.now()
                 ws.sheet_view.showGridLines = False
                 nc = len(df.columns)
                 nr = len(df)
@@ -2269,8 +2307,18 @@ class ModernRedINVENTRAManager:
 
                 # ── subtitle (row 2) ──
                 ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=nc)
-                s = ws.cell(row=2, column=1,
-                            value=f"  Generated: {datetime.now().strftime('%d %B %Y, %H:%M')}")
+                s = ws.cell(row=2, column=1)
+                if title == "ANALISIS NON SETTING":
+                    prev_str = (
+                        f"   |   previous result : {analisis_file_date.strftime('%d %B %Y, %H:%M')}"
+                        if analisis_file_date else ""
+                    )
+                    s.value = (
+                        f"  🖨  Generated on :   {now.strftime('%d %B %Y')}  |  {now.strftime('%H:%M')} WIB"
+                        f"{prev_str}"
+                    )
+                else:
+                    s.value = f"  Generated: {now.strftime('%d %B %Y, %H:%M')}"
                 s.font      = Font(name="Calibri", size=9, italic=True, color=GRAY_MID)
                 s.fill      = _fill(GRAY_LT)
                 s.alignment = _align("left")
@@ -2310,9 +2358,12 @@ class ModernRedINVENTRAManager:
             wb = Workbook()
             wb.remove(wb.active)
 
+            # Timestamp sekali, dipakai cover & semua sheet
+            now_export = datetime.now()
+
             # Cover sheet pertama
             ws_cover = wb.create_sheet("🏠 COVER", 0)
-            write_cover(ws_cover, data_store)
+            write_cover(ws_cover, data_store, now_export)
 
             # Data sheets
             used_sheet_names = {"🏠 COVER"}
@@ -2329,7 +2380,7 @@ class ModernRedINVENTRAManager:
                 used_sheet_names.add(sheet_name)
 
                 ws = wb.create_sheet(sheet_name)
-                write_styled_sheet(ws, df, key)
+                write_styled_sheet(ws, df, key, now_export)
 
             wb.save(file_path)
             self.root.after(0, lambda: self._save_success(file_path))

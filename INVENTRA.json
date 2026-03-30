@@ -25,10 +25,10 @@
             "size": 741390,
             "filename": "SL SOH -  01012024-30042026 (DummyAll).xlsx"
         },
-        "file_6": {
-            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/INVENTRA_20260219_141206.xlsx",
-            "size": 11601,
-            "filename": "INVENTRA_20260219_141206.xlsx"
+        "file_8": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/INVENTRA_30 March 2026_14-53.xlsx",
+            "size": 4672539,
+            "filename": "INVENTRA_30 March 2026_14-53.xlsx"
         }
     },
     "data_mappings": {
@@ -45,6 +45,7 @@
             "source_file_id": "file_3",
             "sheet_name": "PLJM08",
             "columns": {
+                "distric": "Distric",
                 "stock_code": "Stock Code",
                 "item_name": "Item Name",
                 "soh_akhir": "SOH Akhir",
@@ -102,9 +103,19 @@
                 "due_site_date": "Due Site Date"
             }
         },
-        "ANALISIS": {
-            "source_file_id": "file_6",
-            "sheet_name": "ANALISIS",
+        "ANALISIS SETTING": {
+            "source_file_id": "file_8",
+            "sheet_name": "PLJM08",
+            "columns": {
+                "supplier_name": "Suplier Name",
+                "stock_code": "Stock Code",
+                "item_name": "Item Name",
+                "analisis": "KLASIFIKASI"
+            }
+        },
+        "ANALISIS NON SETTING": {
+            "source_file_id": "file_8",
+            "sheet_name": "PLJM08",
             "columns": {
                 "supplier_name": "Suplier Name",
                 "stock_code": "Stock Code",
