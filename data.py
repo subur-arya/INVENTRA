@@ -227,9 +227,8 @@ def filter_all(data, mapping):
     data["PLJM08"] = data["PLJM08"].dropna(axis=1, how="all")
 
     data = proses_pjm08(data, mapping)
-    data = suplier_order(data, mapping)
-    data = perlu_review(data, mapping)
-    data = analisis(data, mapping)
+    data = analisis_setting(data, mapping)
+    data = analisis_non_setting(data, mapping)
 
     return data
 
@@ -360,16 +359,15 @@ def proses_pjm08(data, mapping):
     )
 
     cond0  = (data["PLJM08"][roq_col] == 0) & (data["PLJM08"]['Next Req Qty'] == 0)
-    cond01 = (data["PLJM08"][roq_col] == 0) & (data["PLJM08"]['Next Req Qty'] != 0)
+    # cond01 = (data["PLJM08"][roq_col] == 0) & (data["PLJM08"]['Next Req Qty'] != 0)
     cond1  = data["PLJM08"]['levering qty'] > (data["PLJM08"][rop_col] + data["PLJM08"][roq_col])
     cond2  = calc > data["PLJM08"][rop_col]
     cond3  = calc < data["PLJM08"][rop_col]
     cond4  = calc == data["PLJM08"][rop_col]
 
     data["PLJM08"]['QTY_RO'] = np.select(
-        [cond0, cond01, cond1, cond2, cond3, cond4],
+        [cond0, cond1, cond2, cond3, cond4],
         [
-            0,
             -1,
             -1,
             0,
@@ -444,56 +442,55 @@ def perlu_review(data, mapping):
 
 
 # =====================================================
-# ANALISIS
+# HELPER ANALISIS
 # =====================================================
 
-def analisis(data, mapping):
+def _proses_analisis(data, mapping, key, roq_filter):
+    """
+    Helper untuk proses analisis.
+    key        : "ANALISIS SETTING" atau "ANALISIS NON SETTING"
+    roq_filter : fungsi lambda untuk filter ROQ, contoh:
+                 lambda df: df["ROQ_PLJM01"] != 0
+    """
     df_src = data["PLJM08"]
 
-    # Ambil hanya ORDER dan PERLU REVIEW
+    # Filter KLASIFIKASI ORDER/PERLU REVIEW + filter ROQ
     df_filter = df_src[
         df_src['KLASIFIKASI'].isin(['ORDER', 'PERLU REVIEW'])
     ].copy()
+    df_filter = df_filter[roq_filter(df_filter)].copy()
 
     df_analisis = pd.DataFrame()
-
-    df_analisis["Suplier Name"] = df_filter["Suplier Name"]
-    df_analisis["Stock Code"] = df_filter[col(mapping, "PLJM08", "stock_code")]
-    df_analisis["Item Name"] = df_filter[col(mapping, "PLJM08", "item_name")]
-    df_analisis["EXP"] = df_filter[col(mapping, "PLJM08", "exp")]
-    df_analisis["QTY_RO"] = df_filter["QTY_RO"]
-    df_analisis["ROP"] = df_filter["ROP"]
-    df_analisis["ROQ"] = df_filter["ROQ"]
-    df_analisis["SOH akhir"] = df_filter[col(mapping, "PLJM08", "soh_akhir")]
-    df_analisis["Last SRD"] = df_filter["Last SRD"]
+    df_analisis["Suplier Name"]   = df_filter["Suplier Name"]
+    df_analisis["Stock Code"]     = df_filter[col(mapping, "PLJM08", "stock_code")]
+    df_analisis["Item Name"]      = df_filter[col(mapping, "PLJM08", "item_name")]
+    df_analisis["EXP"]            = df_filter[col(mapping, "PLJM08", "exp")]
+    df_analisis["QTY_RO"]         = df_filter["QTY_RO"]
+    df_analisis["ROP"]            = df_filter["ROP"]
+    df_analisis["ROQ"]            = df_filter["ROQ"]
+    df_analisis["SOH akhir"]      = df_filter[col(mapping, "PLJM08", "soh_akhir")]
+    df_analisis["Last SRD"]       = df_filter["Last SRD"]
     df_analisis["Keterangan Baru"] = df_filter["KLASIFIKASI"]
 
-    map_supplier = col(mapping, "ANALISIS", "supplier_name")
-    map_sc = col(mapping, "ANALISIS", "stock_code")
-    map_item_name = col(mapping, "ANALISIS", "item_name")
-    map_analisis = col(mapping, "ANALISIS", "analisis")
+    map_supplier  = col(mapping, key, "supplier_name")
+    map_sc        = col(mapping, key, "stock_code")
+    map_item_name = col(mapping, key, "item_name")
+    map_analisis  = col(mapping, key, "analisis")
 
-    # Ambil hanya kolom yang diperlukan saja
-    df_lama = data["ANALISIS"][
-        [map_supplier, map_sc, map_item_name, map_analisis]
-    ].copy()
-
+    df_lama = data[key][[map_supplier, map_sc, map_item_name, map_analisis]].copy()
     df_lama = df_lama.rename(columns={
-        map_supplier: "Suplier Name lama",
-        map_sc: "Stock Code",
+        map_supplier:  "Suplier Name lama",
+        map_sc:        "Stock Code",
         map_item_name: "Item Name lama",
-        map_analisis: "Keterangan lama"
+        map_analisis:  "Keterangan lama"
     })
 
-    # Samakan tipe dulu
     df_analisis["Stock Code"] = df_analisis["Stock Code"].astype(str).str.zfill(9)
-    df_lama[map_sc] = df_lama[map_sc].astype(str).str.zfill(9)
+    df_lama["Stock Code"]     = df_lama["Stock Code"].astype(str).str.zfill(9)
 
-    # Merge berdasarkan Stock Code
     df_merge = df_analisis.merge(
         df_lama,
-        left_on="Stock Code",
-        right_on=map_sc,
+        on="Stock Code",
         how="left",
         suffixes=("", "_lama")
     )
@@ -504,7 +501,6 @@ def analisis(data, mapping):
         df_merge["Suplier Name"] != df_merge["Suplier Name lama"],
         df_merge["Keterangan Baru"] != df_merge["Keterangan lama"]
     ]
-
     hasil = [
         "Perlu di analisis",
         "Item name order baru",
@@ -512,37 +508,44 @@ def analisis(data, mapping):
         "Status analisis berbeda"
     ]
 
-    df_merge["Hasil Perbandingan"] = np.select(
-        kondisi,
-        hasil,
-        default="telah di analisis"
-    )
-
-    # df_merge["Keterangan"] = df_merge[map_analisis]
-
-    df_merge["Review Sebelumnya"] = df_merge["Keterangan lama"].fillna("-")
+    df_merge["Hasil Perbandingan"] = np.select(kondisi, hasil, default="telah di analisis")
+    df_merge["Review Sebelumnya"]  = df_merge["Keterangan lama"].fillna("-")
 
     df_merge = df_merge.drop(
         columns=["Suplier Name lama", "Item Name lama", "Keterangan lama"],
         errors="ignore"
     )
 
-    df_merge = df_merge.sort_values(
-        by="Suplier Name",
-        ascending=True,
-        ignore_index=True
-    )
+    df_merge = df_merge.sort_values(by="Suplier Name", ascending=True, ignore_index=True)
 
     cols = list(df_merge.columns)
     cols.insert(cols.index("Keterangan Baru"), cols.pop(cols.index("Review Sebelumnya")))
     cols.insert(cols.index("Hasil Perbandingan"), cols.pop(cols.index("Keterangan Baru")))
     df_merge = df_merge[cols]
 
-    data["ANALISIS"] = df_merge
-
-    print("df_lama")
-    print(df_lama)
-    print("df_merge")
-    print(df_merge)
-
+    data[key] = df_merge
     return data
+
+
+# =====================================================
+# ANALISIS SETTING (ROQ != 0)
+# =====================================================
+
+def analisis_setting(data, mapping):
+    return _proses_analisis(
+        data, mapping,
+        key="ANALISIS SETTING",
+        roq_filter=lambda df: df["ROQ"] != 0
+    )
+
+
+# =====================================================
+# ANALISIS NON SETTING (ROQ == 0)
+# =====================================================
+
+def analisis_non_setting(data, mapping):
+    return _proses_analisis(
+        data, mapping,
+        key="ANALISIS NON SETTING",
+        roq_filter=lambda df: df["ROQ"] == 0
+    )

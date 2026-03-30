@@ -114,7 +114,8 @@ class MappingDialog:
                 "IR": {"source_file_id": None, "sheet_name": None, "columns": {}},
                 "PO": {"source_file_id": None, "sheet_name": None, "columns": {}},
                 "LEVERING": {"source_file_id": None, "sheet_name": None, "columns": {}},
-                "ANALISIS": {"source_file_id": None, "sheet_name": None, "columns": {}},
+                "ANALISIS SETTING": {"source_file_id": None, "sheet_name": None, "columns": {}},
+                "ANALISIS NON SETTING": {"source_file_id": None, "sheet_name": None, "columns": {}},
             }
         }
         
@@ -193,7 +194,7 @@ class MappingDialog:
         self.notebook.pack(fill="both", expand=True)
         
         # Create tabs for each data type
-        data_types = ["PLJM01", "PLJM08", "SRD", "SLN", "IR", "PO", "LEVERING", "ANALISIS"]
+        data_types = ["PLJM01", "PLJM08", "SRD", "SLN", "IR", "PO", "LEVERING", "ANALISIS SETTING", "ANALISIS NON SETTING"]
         self.widgets = {}
         
         for data_type in data_types:
@@ -525,7 +526,13 @@ class MappingDialog:
                 ("curr_qty_p", "Current Qty", "CURR_QTY_P"),
                 ("due_site_date", "Due Site Date", "DUE_SITE_DATE")
             ],
-            "ANALISIS": [
+            "ANALISIS SETTING": [
+                ("supplier_name", "Supplier Name", "Supplier Name"),
+                ("stock_code", "Stock Code", "STOCK_CODE"),
+                ("item_name", "Item Name", "Item Name"),
+                ("analisis", "Analisis", "Keterangan")
+            ],
+            "ANALISIS NON SETTING": [
                 ("supplier_name", "Supplier Name", "Supplier Name"),
                 ("stock_code", "Stock Code", "STOCK_CODE"),
                 ("item_name", "Item Name", "Item Name"),
@@ -616,7 +623,8 @@ class ModernRedINVENTRAManager:
             "LEVERING": None,
             "SupplierOrder": None,
             "PerluReview": None,
-            "ANALISIS": None
+            "ANALISIS SETTING": None,
+            "ANALISIS NON SETTING": None,
         }
         
         # Current selected view
@@ -906,7 +914,11 @@ class ModernRedINVENTRAManager:
                 "stock_code": "STOCK_CODE",  "receipt_status": "RECEIPT_STATUS",
                 "curr_qty_p": "CURR_QTY_P", "due_site_date": "DUE_SITE_DATE"
             }},
-            "ANALISIS": {"source_file_id": None, "sheet_name": None, "columns": {
+            "ANALISIS SETTING": {"source_file_id": None, "sheet_name": None, "columns": {
+                "supplier_name": "Supplier Name", "stock_code": "STOCK_CODE",
+                "item_name": "Item Name",         "analisis": "Keterangan"
+            }},
+            "ANALISIS NON SETTING": {"source_file_id": None, "sheet_name": None, "columns": {
                 "supplier_name": "Supplier Name", "stock_code": "STOCK_CODE",
                 "item_name": "Item Name",         "analisis": "Keterangan"
             }}
@@ -1835,7 +1847,7 @@ class ModernRedINVENTRAManager:
                     return
             
             # Check if all data is available
-            REQUIRED_SECTIONS = ["PLJM08", "SRD", "SLN", "IR", "PO", "LEVERING"]
+            REQUIRED_SECTIONS = ["PLJM08", "SRD", "SLN", "IR", "PO", "LEVERING", "ANALISIS SETTING", "ANALISIS NON SETTING"]
             missing = [key for key in REQUIRED_SECTIONS if self.data_store.get(key) is None]
             if missing:
                 messagebox.showwarning(
@@ -2037,7 +2049,7 @@ class ModernRedINVENTRAManager:
         data_copy = {
             k: v.copy() if isinstance(v, pd.DataFrame) else v
             for k, v in self.data_store.items()
-            if k != "PLJM01"
+            if k not in ("PLJM01",)
         }
 
         # Disable save button if exists
