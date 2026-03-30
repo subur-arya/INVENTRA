@@ -1,0 +1,84 @@
+{
+    "uploaded_files": {
+        "file_1": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/SRD dummy - Copy.xls",
+            "size": 670720,
+            "filename": "SRD dummy - Copy.xls"
+        }
+    },
+    "data_mappings": {
+        "PLJM08": {
+            "source_file_id": "file_10",
+            "sheet_name": "Sheet1",
+            "columns": {
+                "stock_code": "Stock Code",
+                "item_name": "Item Name",
+                "soh_akhir": "SOH Akhir",
+                "rop": "ROP",
+                "roq": "ROQ",
+                "exp": "Exp"
+            }
+        },
+        "SRD": {
+            "source_file_id": "file_13",
+            "sheet_name": "Sheet1",
+            "columns": {
+                "stock_code": "STOCK_CODE",
+                "qty_rcv_uop": "QTY_RCV_UOP",
+                "creation_date": "CREATION_DATE"
+            }
+        },
+        "SLN": {
+            "source_file_id": "file_12",
+            "sheet_name": "Sheet1",
+            "columns": {
+                "stock_code": "Stock Code",
+                "qty_req": "Qty Req",
+                "qty_issued": "QTY_ISSUED",
+                "last_acq_date": "Last Acq Date"
+            }
+        },
+        "IR": {
+            "source_file_id": "file_12",
+            "sheet_name": "Sheet1",
+            "columns": {
+                "stock_code": "Stock Code",
+                "qty_req": "Qty Req",
+                "qty_issued": "QTY_ISSUED",
+                "req_by_date": "Req By Date"
+            }
+        },
+        "PO": {
+            "source_file_id": "file_11",
+            "sheet_name": "Sheet1",
+            "columns": {
+                "stock_code": "STOCK_CODE",
+                "supplier_name": "SUPPLIER_NAME",
+                "order_date": "ORDER_DATE",
+                "receipt_status": "RECEIPT_STATUS",
+                "qty_rcv_dir": "QTY_RCV_DIR_I",
+                "curr_qty": "CURR_QTY_P"
+            }
+        },
+        "LEVERING": {
+            "source_file_id": "file_11",
+            "sheet_name": "Sheet1",
+            "columns": {
+                "stock_code": "STOCK_CODE",
+                "receipt_status": "RECEIPT_STATUS",
+                "curr_qty_p": "CURR_QTY_P",
+                "due_site_date": "DUE_SITE_DATE"
+            }
+        },
+        "ANALISIS": {
+            "source_file_id": "file_5",
+            "sheet_name": "PLJM08",
+            "columns": {
+                "supplier_name": "Suplier Name",
+                "stock_code": "Stock Code",
+                "item_name": "Item Name",
+                "analisis": "KLASIFIKASI"
+            }
+        }
+    }
+}
