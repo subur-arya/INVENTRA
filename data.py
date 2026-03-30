@@ -418,8 +418,7 @@ def _proses_analisis(data, mapping, key, roq_filter):
     df_analisis["ROP"]            = df_filter["ROP"]
     df_analisis["ROQ"]            = df_filter["ROQ"]
     df_analisis["SOH akhir"]      = df_filter[col(mapping, "PLJM08", "soh_akhir")]
-    df_analisis["Last SRD"]       = df_filter["Last SRD"]
-    df_analisis["Keterangan Baru"] = df_filter["KLASIFIKASI"]
+    df_analisis["Keterangan"]     = df_filter["KLASIFIKASI"]
 
     map_supplier  = col(mapping, key, "supplier_name")
     map_sc        = col(mapping, key, "stock_code")
@@ -448,7 +447,7 @@ def _proses_analisis(data, mapping, key, roq_filter):
         (df_merge["Item Name lama"].isna()) | (df_merge["Suplier Name lama"].isna()),
         df_merge["Item Name"] != df_merge["Item Name lama"],
         df_merge["Suplier Name"] != df_merge["Suplier Name lama"],
-        df_merge["Keterangan Baru"] != df_merge["Keterangan lama"]
+        df_merge["Keterangan"] != df_merge["Keterangan lama"]
     ]
     hasil = [
         "Perlu di analisis",
@@ -457,7 +456,7 @@ def _proses_analisis(data, mapping, key, roq_filter):
         "Status analisis berbeda"
     ]
 
-    df_merge["Hasil Perbandingan"] = np.select(kondisi, hasil, default="telah di analisis")
+    df_merge["Evaluasi"] = np.select(kondisi, hasil, default="telah di analisis")
     df_merge["Review Sebelumnya"]  = df_merge["Keterangan lama"].fillna("-")
 
     df_merge = df_merge.drop(
@@ -468,8 +467,8 @@ def _proses_analisis(data, mapping, key, roq_filter):
     df_merge = df_merge.sort_values(by="Suplier Name", ascending=True, ignore_index=True)
 
     cols = list(df_merge.columns)
-    cols.insert(cols.index("Keterangan Baru"), cols.pop(cols.index("Review Sebelumnya")))
-    cols.insert(cols.index("Hasil Perbandingan"), cols.pop(cols.index("Keterangan Baru")))
+    cols.insert(cols.index("Keterangan"), cols.pop(cols.index("Review Sebelumnya")))
+    cols.insert(cols.index("Evaluasi"), cols.pop(cols.index("Keterangan")))
     df_merge = df_merge[cols]
 
     data[key] = df_merge
@@ -489,12 +488,71 @@ def analisis_setting(data, mapping):
 
 
 # =====================================================
-# ANALISIS NON SETTING (ROQ == 0)
+# ANALISIS NON SETTING (ROQ == 0 + Next Req Date >= hari ini)
+# Header: Suplier Name | Stock Code | Item Name | EXP |
+#         QTY_RO | ROP | ROQ | SOH akhir |
+#         IR Qty | IR Date | Keterangan
 # =====================================================
 
 def analisis_non_setting(data, mapping):
-    return _proses_analisis(
-        data, mapping,
-        key="ANALISIS NON SETTING",
-        roq_filter=lambda df: df["ROQ"] == 0
+
+    df_src = data["PLJM08"]
+    today_str = pd.Timestamp.today().strftime("%Y%m%d")
+
+    # Filter: KLASIFIKASI ORDER/PERLU REVIEW + ROQ == 0 + Next Req Date >= hari ini
+    df_filter = df_src[
+        df_src['KLASIFIKASI'].isin(['ORDER', 'PERLU REVIEW'])
+    ].copy()
+
+    df_filter = df_filter[df_filter["ROQ"] == 0].copy()
+
+    df_filter = df_filter[
+        df_filter["Next Req Date"].notna() &
+        (df_filter["Next Req Date"].astype(str).str.strip() >= today_str)
+    ].copy()
+
+    # Susun kolom sesuai header yang diminta
+    df_analisis = pd.DataFrame(index=df_filter.index)
+    df_analisis["Suplier Name"] = df_filter["Suplier Name"]
+    df_analisis["Stock Code"]   = df_filter[col(mapping, "PLJM08", "stock_code")]
+    df_analisis["Item Name"]    = df_filter[col(mapping, "PLJM08", "item_name")]
+    df_analisis["EXP"]          = df_filter[col(mapping, "PLJM08", "exp")]
+    df_analisis["QTY_RO"]       = df_filter["QTY_RO"]
+    df_analisis["ROP"]          = df_filter["ROP"]
+    df_analisis["ROQ"]          = df_filter["ROQ"]
+    df_analisis["SOH akhir"]    = df_filter[col(mapping, "PLJM08", "soh_akhir")]
+    df_analisis["IR Qty"]       = df_filter["Next Req Qty"]
+    df_analisis["IR Date"]      = df_filter["Next Req Date"]
+
+    # Ambil Keterangan dari data ANALISIS NON SETTING lama (review sebelumnya)
+    key = "ANALISIS NON SETTING"
+    map_sc       = col(mapping, key, "stock_code")
+    map_analisis = col(mapping, key, "analisis")
+
+    df_lama = data[key][[map_sc, map_analisis]].copy()
+    df_lama = df_lama.rename(columns={
+        map_sc:       "Stock Code",
+        map_analisis: "Keterangan lama"
+    })
+
+    df_analisis["Stock Code"] = df_analisis["Stock Code"].astype(str).str.zfill(9)
+    df_lama["Stock Code"]     = df_lama["Stock Code"].astype(str).str.zfill(9)
+
+    df_merge = df_analisis.merge(
+        df_lama,
+        on="Stock Code",
+        how="left"
     )
+
+    # Kolom Keterangan diisi dari review sebelumnya (lama), default "-"
+    df_merge["Keterangan"] = df_merge["Keterangan lama"].fillna("-")
+    df_merge = df_merge.drop(columns=["Keterangan lama"], errors="ignore")
+
+    df_merge = df_merge.sort_values(by="Suplier Name", ascending=True, ignore_index=True)
+
+    data[key] = df_merge
+
+    print(f"ANALISIS NON SETTING: {len(df_merge)} baris")
+    print(df_merge)
+
+    return data
