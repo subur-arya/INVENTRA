@@ -492,7 +492,7 @@ class MappingDialog:
                 ("stock_code", "Stock Code", "Stock Code"),
                 ("item_name", "Item Name", "Item Name"),
                 ("soh_akhir", "SOH Akhir", "SOH Akhir"),
-                ("exp", "EXP", "EXP")
+                ("exp", "EXP", "Exp")
             ],
             "SRD": [
                 ("stock_code", "Stock Code", "STOCK_CODE"),
@@ -1875,6 +1875,8 @@ class ModernRedINVENTRAManager:
         for key, df in self.data_store.items():
             if df is None:
                 continue
+            if key == "PLJM01":
+                continue
             
             btn = self.create_view_button(parent, key, key)
             btn.pack(side="left", padx=(0, 5))
@@ -2031,9 +2033,11 @@ class ModernRedINVENTRAManager:
             return
 
         # Copy data to avoid mutation during thread execution
+        # PLJM01 tidak disertakan di Excel output
         data_copy = {
             k: v.copy() if isinstance(v, pd.DataFrame) else v
             for k, v in self.data_store.items()
+            if k != "PLJM01"
         }
 
         # Disable save button if exists

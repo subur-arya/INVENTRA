@@ -222,6 +222,10 @@ def filter_all(data, mapping):
     data["LEVERING"] = filter_levering(data["LEVERING"], mapping)
 
     data = proses_pljm01(data, mapping)
+
+    # Hapus kolom di PLJM08 yang seluruh isinya kosong (NaN / None)
+    data["PLJM08"] = data["PLJM08"].dropna(axis=1, how="all")
+
     data = proses_pjm08(data, mapping)
     data = suplier_order(data, mapping)
     data = perlu_review(data, mapping)
@@ -540,42 +544,5 @@ def analisis(data, mapping):
     print(df_lama)
     print("df_merge")
     print(df_merge)
-
-    # ===============================================
-    # SPLIT ANALISIS BERDASARKAN KOLOM TERTENTU
-    # ===============================================
-
-    # kolom_split = "EXP"   # GANTI dengan nama kolom yang kamu mau
-    # kolom_split = col(mapping, "PLJM08", "exp")
-    # print(kolom_split)
-
-    # if kolom_split in df_merge.columns:
-    #     # print("ada")
-
-    #     unique_values = (
-    #         df_merge[kolom_split]
-    #         .dropna()
-    #         .astype(str)
-    #         .str.strip()
-    #         .unique()
-    #     )
-
-    #     for val in unique_values:
-
-    #         safe_name = (
-    #             val.upper()
-    #             .replace(" ", "_")
-    #             .replace("/", "_")
-    #             .replace("-", "_")
-    #         )
-
-            
-    #         key_name = f"ANALISIS {safe_name}"
-
-    #         data[key_name] = df_merge[
-    #             df_merge[kolom_split].astype(str).str.strip() == val
-    #         ].copy()
-
-    #         print(f"Sheet dibuat: {key_name}")
 
     return data
