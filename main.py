@@ -621,8 +621,6 @@ class ModernRedINVENTRAManager:
             "IR": None,
             "PO": None,
             "LEVERING": None,
-            "SupplierOrder": None,
-            "PerluReview": None,
             "ANALISIS SETTING": None,
             "ANALISIS NON SETTING": None,
         }

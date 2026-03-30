@@ -391,57 +391,6 @@ def proses_pjm08(data, mapping):
 
 
 # =====================================================
-# SUPPLIER ORDER
-# =====================================================
-
-def suplier_order(data, mapping):
-
-    df_src = data["PLJM08"]
-
-    df_order = df_src.loc[df_src['KLASIFIKASI'] == 'ORDER'].copy()
-
-    kolom_order = [
-        'Suplier Name',
-        col(mapping,"PLJM08","stock_code"),
-        col(mapping,"PLJM08","item_name"),
-        'KLASIFIKASI',
-        'QTY_RO'
-    ]
-
-    kolom_ada = [c for c in kolom_order if c in df_order.columns]
-
-    df_baru = df_order.loc[:, kolom_ada].copy()
-
-    df_baru = df_baru.sort_values(by='Suplier Name', ignore_index=True)
-
-    data["SupplierOrder"] = df_baru
-
-    return data
-
-
-# =====================================================
-# PERLU REVIEW
-# =====================================================
-
-def perlu_review(data, mapping):
-
-    df_src = data["PLJM08"]
-
-    df_filter = df_src.loc[df_src['KLASIFIKASI'] == 'PERLU REVIEW'].copy()
-
-    kolom_review = list(df_filter.columns)
-
-    df_perlu_review = df_filter.loc[:, kolom_review].copy()
-
-    df_perlu_review = df_perlu_review.sort_values(by=col(mapping,"PLJM08","stock_code"), ignore_index=True)
-
-    data["PerluReview"] = df_perlu_review
-
-    return data
-
-
-
-# =====================================================
 # HELPER ANALISIS
 # =====================================================
 
