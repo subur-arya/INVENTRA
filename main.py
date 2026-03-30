@@ -491,7 +491,8 @@ class MappingDialog:
             "PLJM08": [
                 ("stock_code", "Stock Code", "Stock Code"),
                 ("item_name", "Item Name", "Item Name"),
-                ("soh_akhir", "SOH Akhir", "SOH Akhir")
+                ("soh_akhir", "SOH Akhir", "SOH Akhir"),
+                ("exp", "EXP", "EXP")
             ],
             "SRD": [
                 ("stock_code", "Stock Code", "STOCK_CODE"),
@@ -2408,7 +2409,9 @@ class ModernRedINVENTRAManager:
     
     def read_excel_auto_header(self, file_path, sheet_name):
         """
-        Baca excel dan otomatis cari baris header berdasarkan 'Stock Code'
+        Baca excel dan otomatis cari baris header.
+        Baris dianggap header jika mengandung 'Stock Code' DAN
+        salah satu variasi kata 'District' (Dstrct, Distric, District, dll).
         """
 
         # baca tanpa header dulu
@@ -2416,8 +2419,15 @@ class ModernRedINVENTRAManager:
 
         header_row = None
 
+        # Pola district: cocok dengan variasi seperti Dstrct, Distric, District, Distrct
+        district_pattern = r"dis?tri?c"
+
         for i, row in temp_df.iterrows():
-            if row.astype(str).str.contains("Stock Code", case=False, na=False).any():
+            row_str = row.astype(str)
+            has_stock_code = row_str.str.contains(r"stock\s*code", case=False, na=False, regex=True).any()
+            has_district   = row_str.str.contains(district_pattern, case=False, na=False, regex=True).any()
+
+            if has_stock_code and has_district:
                 header_row = i
                 break
 

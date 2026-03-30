@@ -1,78 +1,110 @@
 {
     "uploaded_files": {
         "file_1": {
-            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/SRD dummy - Copy.xls",
-            "size": 670720,
-            "filename": "SRD dummy - Copy.xls"
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PENERIMAAN MATERIAL SRD - 01012024-30042026 (DummyAll).xlsx",
+            "size": 376759,
+            "filename": "PENERIMAAN MATERIAL SRD - 01012024-30042026 (DummyAll).xlsx"
+        },
+        "file_2": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PLJM01 (DummyAll).xlsx",
+            "size": 8157392,
+            "filename": "PLJM01 (DummyAll).xlsx"
+        },
+        "file_3": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PLJM08 (DummyAll).xlsx",
+            "size": 3444238,
+            "filename": "PLJM08 (DummyAll).xlsx"
+        },
+        "file_4": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PO STOCK -  01012024-30042026 (DummyAll).xlsx",
+            "size": 430587,
+            "filename": "PO STOCK -  01012024-30042026 (DummyAll).xlsx"
+        },
+        "file_5": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/SL SOH -  01012024-30042026 (DummyAll).xlsx",
+            "size": 741390,
+            "filename": "SL SOH -  01012024-30042026 (DummyAll).xlsx"
+        },
+        "file_6": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/INVENTRA_20260219_141206.xlsx",
+            "size": 11601,
+            "filename": "INVENTRA_20260219_141206.xlsx"
         }
     },
     "data_mappings": {
+        "PLJM01": {
+            "source_file_id": "file_2",
+            "sheet_name": "Inventory Non Category",
+            "columns": {
+                "stock_code": "Stock Code",
+                "rop": "Rop",
+                "roq": "Roq"
+            }
+        },
         "PLJM08": {
-            "source_file_id": "file_10",
-            "sheet_name": "Sheet1",
+            "source_file_id": "file_3",
+            "sheet_name": "PLJM08",
             "columns": {
                 "stock_code": "Stock Code",
                 "item_name": "Item Name",
                 "soh_akhir": "SOH Akhir",
-                "rop": "ROP",
-                "roq": "ROQ",
                 "exp": "Exp"
             }
         },
         "SRD": {
-            "source_file_id": "file_13",
-            "sheet_name": "Sheet1",
+            "source_file_id": "file_1",
+            "sheet_name": "Worksheet",
             "columns": {
-                "stock_code": "STOCK_CODE",
-                "qty_rcv_uop": "QTY_RCV_UOP",
-                "creation_date": "CREATION_DATE"
+                "stock_code": "Stock Code",
+                "qty_rcv_uop": "Qty Rcv Uop",
+                "creation_date": "Creation Date"
             }
         },
         "SLN": {
-            "source_file_id": "file_12",
-            "sheet_name": "Sheet1",
+            "source_file_id": "file_5",
+            "sheet_name": "Worksheet",
             "columns": {
                 "stock_code": "Stock Code",
                 "qty_req": "Qty Req",
-                "qty_issued": "QTY_ISSUED",
+                "qty_issued": "Qty Issued",
                 "last_acq_date": "Last Acq Date"
             }
         },
         "IR": {
-            "source_file_id": "file_12",
-            "sheet_name": "Sheet1",
+            "source_file_id": "file_5",
+            "sheet_name": "Worksheet",
             "columns": {
                 "stock_code": "Stock Code",
                 "qty_req": "Qty Req",
-                "qty_issued": "QTY_ISSUED",
+                "qty_issued": "Qty Issued",
                 "req_by_date": "Req By Date"
             }
         },
         "PO": {
-            "source_file_id": "file_11",
-            "sheet_name": "Sheet1",
+            "source_file_id": "file_4",
+            "sheet_name": "Worksheet",
             "columns": {
-                "stock_code": "STOCK_CODE",
-                "supplier_name": "SUPPLIER_NAME",
-                "order_date": "ORDER_DATE",
-                "receipt_status": "RECEIPT_STATUS",
-                "qty_rcv_dir": "QTY_RCV_DIR_I",
-                "curr_qty": "CURR_QTY_P"
+                "stock_code": "Stock Code",
+                "supplier_name": "Supplier Name",
+                "order_date": "Order Date",
+                "receipt_status": "Receipt Status",
+                "qty_rcv_dir": "Qty Rcv Dir I",
+                "curr_qty": "Curr Qty P"
             }
         },
         "LEVERING": {
-            "source_file_id": "file_11",
-            "sheet_name": "Sheet1",
+            "source_file_id": "file_4",
+            "sheet_name": "Worksheet",
             "columns": {
-                "stock_code": "STOCK_CODE",
-                "receipt_status": "RECEIPT_STATUS",
-                "curr_qty_p": "CURR_QTY_P",
-                "due_site_date": "DUE_SITE_DATE"
+                "stock_code": "Stock Code",
+                "receipt_status": "Receipt Status",
+                "curr_qty_p": "Curr Qty P",
+                "due_site_date": "Due Site Date"
             }
         },
         "ANALISIS": {
-            "source_file_id": "file_5",
-            "sheet_name": "PLJM08",
+            "source_file_id": "file_6",
+            "sheet_name": "ANALISIS",
             "columns": {
                 "supplier_name": "Suplier Name",
                 "stock_code": "Stock Code",

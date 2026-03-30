@@ -221,11 +221,53 @@ def filter_all(data, mapping):
     data["PO"] = filter_po(data["PO"], mapping)
     data["LEVERING"] = filter_levering(data["LEVERING"], mapping)
 
+    data = proses_pljm01(data, mapping)
     data = proses_pjm08(data, mapping)
     data = suplier_order(data, mapping)
     data = perlu_review(data, mapping)
     data = analisis(data, mapping)
 
+    return data
+
+
+# =====================================================
+# VLOOKUP PLJM01 -> PLJM08
+# =====================================================
+
+def proses_pljm01(data, mapping):
+
+    c01_stock = col(mapping, "PLJM01", "stock_code")
+    c01_rop   = col(mapping, "PLJM01", "rop")
+    c01_roq   = col(mapping, "PLJM01", "roq")
+    c08_stock = col(mapping, "PLJM08", "stock_code")
+
+    df01 = data["PLJM01"].copy()
+    df08 = data["PLJM08"].copy()
+
+    # Normalisasi stock code ke 9 digit
+    df01[c01_stock] = df01[c01_stock].astype(str).str.zfill(9)
+    df08[c08_stock] = df08[c08_stock].astype(str).str.zfill(9)
+
+    # Ambil hanya 3 kolom yang dibutuhkan dari PLJM01
+    df01_slim = df01[[c01_stock, c01_rop, c01_roq]].copy()
+    df01_slim = df01_slim.rename(columns={
+        c01_rop: "ROP",
+        c01_roq: "ROQ"
+    })
+
+    # Merge (vlookup) ke PLJM08 berdasarkan stock_code
+    df08 = df08.merge(
+        df01_slim,
+        left_on=c08_stock,
+        right_on=c01_stock,
+        how="left"
+    )
+
+    # Buang kolom duplikat stock_code dari PLJM01 jika nama kolomnya berbeda
+    if c01_stock != c08_stock and c01_stock in df08.columns:
+        df08 = df08.drop(columns=[c01_stock])
+
+    data["PLJM08"] = df08
     return data
 
 
@@ -299,28 +341,36 @@ def proses_pjm08(data, mapping):
     num_cols = ['Qty ISS','Next Req Qty','Qty SRD','levering qty']
     data["PLJM08"][num_cols] = data["PLJM08"][num_cols].fillna(0)
 
+    # ROP & ROQ diambil dari kolom hasil vlookup PLJM01
+    c_soh   = col(mapping, "PLJM08", "soh_akhir")
+    rop_col = "ROP"
+    roq_col = "ROQ"
+
+    data["PLJM08"][rop_col] = pd.to_numeric(data["PLJM08"][rop_col], errors='coerce').fillna(0)
+    data["PLJM08"][roq_col] = pd.to_numeric(data["PLJM08"][roq_col], errors='coerce').fillna(0)
+
     calc = (
-        data["PLJM08"]['SOH Akhir'].fillna(0)
+        data["PLJM08"][c_soh].fillna(0)
         - data["PLJM08"]['Next Req Qty'].fillna(0)
         + data["PLJM08"]['levering qty'].fillna(0)
     )
 
-    cond0 = (data["PLJM08"]['ROQ'] == 0) & (data["PLJM08"]['Next Req Qty'] == 0)
-    cond01 = (data["PLJM08"]['ROQ'] == 0) & (data["PLJM08"]['Next Req Qty'] != 0)
-    cond1 = data["PLJM08"]['levering qty'] > (data["PLJM08"]['ROP'] + data["PLJM08"]['ROQ'])
-    cond2 = calc > data["PLJM08"]['ROP']
-    cond3 = calc < data["PLJM08"]['ROP']
-    cond4 = calc == data["PLJM08"]['ROP']
+    cond0  = (data["PLJM08"][roq_col] == 0) & (data["PLJM08"]['Next Req Qty'] == 0)
+    cond01 = (data["PLJM08"][roq_col] == 0) & (data["PLJM08"]['Next Req Qty'] != 0)
+    cond1  = data["PLJM08"]['levering qty'] > (data["PLJM08"][rop_col] + data["PLJM08"][roq_col])
+    cond2  = calc > data["PLJM08"][rop_col]
+    cond3  = calc < data["PLJM08"][rop_col]
+    cond4  = calc == data["PLJM08"][rop_col]
 
     data["PLJM08"]['QTY_RO'] = np.select(
-        [cond0,cond01,cond1,cond2,cond3,cond4],
+        [cond0, cond01, cond1, cond2, cond3, cond4],
         [
             0,
             -1,
             -1,
             0,
-            (data["PLJM08"]['ROP']+data["PLJM08"]['ROQ'])-calc,
-            data["PLJM08"]['ROQ']
+            (data["PLJM08"][rop_col] + data["PLJM08"][roq_col]) - calc,
+            data["PLJM08"][roq_col]
         ],
         default=0
     )
@@ -408,8 +458,8 @@ def analisis(data, mapping):
     df_analisis["Item Name"] = df_filter[col(mapping, "PLJM08", "item_name")]
     df_analisis["EXP"] = df_filter[col(mapping, "PLJM08", "exp")]
     df_analisis["QTY_RO"] = df_filter["QTY_RO"]
-    df_analisis["ROP"] = df_filter[col(mapping, "PLJM08", "rop")]
-    df_analisis["ROQ"] = df_filter[col(mapping, "PLJM08", "roq")]
+    df_analisis["ROP"] = df_filter["ROP"]
+    df_analisis["ROQ"] = df_filter["ROQ"]
     df_analisis["SOH akhir"] = df_filter[col(mapping, "PLJM08", "soh_akhir")]
     df_analisis["Last SRD"] = df_filter["Last SRD"]
     df_analisis["Keterangan Baru"] = df_filter["KLASIFIKASI"]
@@ -495,37 +545,37 @@ def analisis(data, mapping):
     # SPLIT ANALISIS BERDASARKAN KOLOM TERTENTU
     # ===============================================
 
-    kolom_split = "EXP"   # GANTI dengan nama kolom yang kamu mau
+    # kolom_split = "EXP"   # GANTI dengan nama kolom yang kamu mau
     # kolom_split = col(mapping, "PLJM08", "exp")
     # print(kolom_split)
 
-    if kolom_split in df_merge.columns:
-        # print("ada")
+    # if kolom_split in df_merge.columns:
+    #     # print("ada")
 
-        unique_values = (
-            df_merge[kolom_split]
-            .dropna()
-            .astype(str)
-            .str.strip()
-            .unique()
-        )
+    #     unique_values = (
+    #         df_merge[kolom_split]
+    #         .dropna()
+    #         .astype(str)
+    #         .str.strip()
+    #         .unique()
+    #     )
 
-        for val in unique_values:
+    #     for val in unique_values:
 
-            safe_name = (
-                val.upper()
-                .replace(" ", "_")
-                .replace("/", "_")
-                .replace("-", "_")
-            )
+    #         safe_name = (
+    #             val.upper()
+    #             .replace(" ", "_")
+    #             .replace("/", "_")
+    #             .replace("-", "_")
+    #         )
 
             
-            key_name = f"ANALISIS {safe_name}"
+    #         key_name = f"ANALISIS {safe_name}"
 
-            data[key_name] = df_merge[
-                df_merge[kolom_split].astype(str).str.strip() == val
-            ].copy()
+    #         data[key_name] = df_merge[
+    #             df_merge[kolom_split].astype(str).str.strip() == val
+    #         ].copy()
 
-            print(f"Sheet dibuat: {key_name}")
+    #         print(f"Sheet dibuat: {key_name}")
 
     return data
