@@ -410,6 +410,7 @@ def _proses_analisis(data, mapping, key, roq_filter):
     df_filter = df_filter[roq_filter(df_filter)].copy()
 
     df_analisis = pd.DataFrame()
+    df_analisis["Distric"]        = df_filter[col(mapping, "PLJM08", "distric")]
     df_analisis["Suplier Name"]   = df_filter["Suplier Name"]
     df_analisis["Stock Code"]     = df_filter[col(mapping, "PLJM08", "stock_code")]
     df_analisis["Item Name"]      = df_filter[col(mapping, "PLJM08", "item_name")]

@@ -2209,7 +2209,7 @@ class ModernRedINVENTRAManager:
 
                 mset(ws, 2, 2, 2, 5, "INVENTRA",
                      bold=True, size=40, color=WHITE, bg=RED_DARK, halign="center")
-                mset(ws, 3, 2, 3, 5, "Inventory Management System  —  Export Report",
+                mset(ws, 3, 2, 3, 5, "Inventory Report Analysis",
                      bold=False, size=12, color=RED_MID, bg=RED_DARK,
                      halign="center", italic=True)
 
@@ -2323,27 +2323,48 @@ class ModernRedINVENTRAManager:
                 s.fill      = _fill(GRAY_LT)
                 s.alignment = _align("left")
                 ws.row_dimensions[2].height = 16
-                ws.row_dimensions[3].height = 6   # spacer
 
-                # ── header kolom (row 4) — hanya 1 baris, cepat ──
+                # ── distric row (row 3) ──
+                ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=nc)
+                d = ws.cell(row=3, column=1)
+                # Cari kolom distric langsung dari df (nama kolom bervariasi: Distric, District, Dstrct, dll)
+                import re as _re
+                distric_col = next(
+                    (c for c in df.columns if _re.search(r"d(?:i?s?t?r?i?c|strct)", str(c), _re.IGNORECASE)),
+                    None
+                )
+                if distric_col:
+                    distric_values = df[distric_col].dropna().astype(str).unique().tolist()
+                    distric_str = "  |  ".join(sorted(distric_values)) if distric_values else "-"
+                else:
+                    distric_str = "-"
+                d.value     = f"  📍  Distric :   {distric_str}"
+                d.font      = Font(name="Calibri", size=9, italic=False, bold=False, color=GRAY_MID)
+                d.fill      = _fill(GRAY_LT)
+                d.alignment = _align("left")
+                ws.row_dimensions[3].height = 16
+
+                ws.row_dimensions[4].height = 6   # spacer
+
+                # ── header kolom (row 5) ──
                 for ci, col_name in enumerate(df.columns, 1):
-                    c = ws.cell(row=4, column=ci, value=str(col_name))
+                    c = ws.cell(row=5, column=ci, value=str(col_name))
                     c.font      = Font(name="Calibri", bold=True, color=WHITE, size=11)
                     c.fill      = _fill(RED_MAIN)
                     c.alignment = _align("center")
                     c.border    = _border()
-                ws.row_dimensions[4].height = 30
+                ws.row_dimensions[5].height = 30
 
                 # ── tulis data: value only, tanpa styling (tercepat) ──
                 # konversi ke list of lists dulu (pandas vectorized, jauh lebih cepat dari iterrows)
                 data_values = df.fillna("").values.tolist()
-                for ri, row_vals in enumerate(data_values, 5):
+                for ri, row_vals in enumerate(data_values, 6):
                     for ci, value in enumerate(row_vals, 1):
                         ws.cell(row=ri, column=ci, value=value)
 
                 # ── freeze & autofilter ──
-                ws.freeze_panes = ws.cell(row=5, column=1)
-                ws.auto_filter.ref = f"A4:{get_column_letter(nc)}{4 + nr}"
+                ws.freeze_panes = ws.cell(row=6, column=1)
+                ws.auto_filter.ref = f"A5:{get_column_letter(nc)}{5 + nr}"
 
                 # ── auto-fit: sampling 100 baris + header ──
                 sample = df.head(100)
@@ -2353,6 +2374,7 @@ class ModernRedINVENTRAManager:
                     data_len   = 0 if pd.isna(data_len) else int(data_len)
                     best       = min(max(max(header_len, data_len) + 3, 10), 45)
                     ws.column_dimensions[get_column_letter(ci)].width = best
+
 
             # ── BUILD WORKBOOK ───────────────────────────────────
             wb = Workbook()
