@@ -11,6 +11,7 @@ from tutorial import TutorialScreen
 from drp_app import DRPApp
 from proses_GSheet import WEB_APP_URL
 import threading
+from openpyxl.drawing.image import Image as XLImage
 
 try:
     import pywinstyles
@@ -2205,15 +2206,8 @@ class ModernRedINVENTRAManager:
                 for row in range(1, total_rows + 1):
                     fill_row(ws, row, GRAY_BG, ncols=NCOLS)
 
-                # header gelap rows 1-4
-                for row in range(1, 5):
-                    fill_row(ws, row, RED_DARK, ncols=NCOLS)
-
-                mset(ws, 2, 2, 2, 5, "INVENTRA",
-                     bold=True, size=40, color=WHITE, bg=RED_DARK, halign="center")
-                mset(ws, 3, 2, 3, 5, "Inventory Report Analysis",
-                     bold=False, size=12, color=RED_MID, bg=RED_DARK,
-                     halign="center", italic=True)
+                # hanya row 1 untuk header
+                fill_row(ws, 1, RED_DARK, ncols=NCOLS)
 
                 # accent stripe
                 fill_row(ws, 4, RED_MAIN, ncols=NCOLS)
@@ -2388,6 +2382,24 @@ class ModernRedINVENTRAManager:
             # Cover sheet pertama
             ws_cover = wb.create_sheet("Resume", 0)
             write_cover(ws_cover, data_store, now_export)
+
+            # merge header
+            ws_cover.merge_cells("A1:F1")
+            ws_cover.row_dimensions[1].height = 140
+
+            # insert logo
+            try:
+                img = XLImage(resource_path("logo_trsp.png"))
+
+                img.width = 360
+                img.height = 130
+
+                img.anchor = "C1"   # atau "D1" kalau mau lebih kanan
+
+                ws_cover.add_image(img)
+
+            except Exception as e:
+                print("Logo gagal dimasukkan:", e)
 
             # Data sheets
             used_sheet_names = {"Resume"}  # untuk track nama sheet agar tidak duplikat
