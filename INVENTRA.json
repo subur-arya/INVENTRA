@@ -26,9 +26,9 @@
             "filename": "SL SOH -  01012024-30042026 (DummyAll).xlsx"
         },
         "file_9": {
-            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/INVENTRA_31 March 2026_08-21.xlsx",
-            "size": 4672325,
-            "filename": "INVENTRA_31 March 2026_08-21.xlsx"
+            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/INVENTRA_20260310_135031_(LastVers).xlsx",
+            "size": 48974,
+            "filename": "INVENTRA_20260310_135031_(LastVers).xlsx"
         }
     },
     "data_mappings": {
@@ -105,7 +105,7 @@
         },
         "ANALISIS SETTING": {
             "source_file_id": "file_9",
-            "sheet_name": "PLJM08",
+            "sheet_name": "ANALISIS SETTING",
             "columns": {
                 "supplier_name": "Suplier Name",
                 "stock_code": "Stock Code",
@@ -115,7 +115,7 @@
         },
         "ANALISIS NON SETTING": {
             "source_file_id": "file_9",
-            "sheet_name": "PLJM08",
+            "sheet_name": "ANALISIS NON SETTING",
             "columns": {
                 "supplier_name": "Suplier Name",
                 "stock_code": "Stock Code",

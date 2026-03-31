@@ -1734,7 +1734,8 @@ class ModernRedINVENTRAManager:
             if self.data_store.get(key) is None:
                 continue
 
-            btn = self.create_view_button(view_selector_frame, key, key)
+            display_name = "PLJM" if key == "PLJM08" else key
+            btn = self.create_view_button(view_selector_frame, key, display_name)
             self.view_buttons[key] = btn
 
         # Jalankan setelah render
@@ -1889,7 +1890,8 @@ class ModernRedINVENTRAManager:
             if key == "PLJM01":
                 continue
             
-            btn = self.create_view_button(parent, key, key)
+            display_name = "PLJM" if key == "PLJM08" else key
+            btn = self.create_view_button(parent, key, display_name)
             btn.pack(side="left", padx=(0, 5))
             self.view_buttons[key] = btn
     
@@ -2384,16 +2386,17 @@ class ModernRedINVENTRAManager:
             now_export = datetime.now()
 
             # Cover sheet pertama
-            ws_cover = wb.create_sheet("🏠 COVER", 0)
+            ws_cover = wb.create_sheet("Resume", 0)
             write_cover(ws_cover, data_store, now_export)
 
             # Data sheets
-            used_sheet_names = {"🏠 COVER"}
+            used_sheet_names = {"Resume"}  # untuk track nama sheet agar tidak duplikat
             for key, df in data_store.items():
                 if df is None or not isinstance(df, pd.DataFrame):
                     continue
-
-                sheet_name = str(key)[:31]
+                
+                display_name = "PLJM" if key == "PLJM08" else key
+                sheet_name = str(display_name)[:31]
                 original_name = sheet_name
                 counter = 1
                 while sheet_name in used_sheet_names:
@@ -2402,7 +2405,7 @@ class ModernRedINVENTRAManager:
                 used_sheet_names.add(sheet_name)
 
                 ws = wb.create_sheet(sheet_name)
-                write_styled_sheet(ws, df, key, now_export)
+                write_styled_sheet(ws, df, display_name, now_export)
 
             wb.save(file_path)
             self.root.after(0, lambda: self._save_success(file_path))
