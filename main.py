@@ -2053,7 +2053,7 @@ class ModernRedINVENTRAManager:
             if k not in ("PLJM01",)
         }
 
-        # Ambil tanggal previous result dari sheet COVER cell C7
+        # Ambil tanggal previous result dari sheet Resume (atau sheet pertama)
         analisis_file_date = None
         try:
             ns_file_id = None
@@ -2067,20 +2067,23 @@ class ModernRedINVENTRAManager:
                 if ns_file_path and os.path.exists(ns_file_path):
                     from openpyxl import load_workbook
                     wb_prev = load_workbook(ns_file_path, read_only=True, data_only=True)
+                    # Cari sheet "Resume" (case-insensitive), fallback ke sheet pertama
                     cover_sheet_name = next(
-                        (s for s in wb_prev.sheetnames if "COVER" in s.upper()), None
+                        (s for s in wb_prev.sheetnames if "resume" in s.lower()),
+                        wb_prev.sheetnames[0]
                     )
-                    if cover_sheet_name:
-                        ws_prev = wb_prev[cover_sheet_name]
-                        cell_val = ws_prev["C7"].value
-                        if isinstance(cell_val, datetime):
-                            analisis_file_date = cell_val
-                        elif cell_val:
-                            # Format: '30 March 2026  |  14:53 WIB' — ambil bagian sebelum '|'
-                            raw = str(cell_val).split("|")[0].strip()
-                            analisis_file_date = pd.to_datetime(raw, dayfirst=True, errors="coerce")
-                            if pd.isna(analisis_file_date):
-                                analisis_file_date = None
+                    ws_prev = wb_prev[cover_sheet_name]
+                    cell_val = ws_prev["C7"].value
+                    if isinstance(cell_val, datetime):
+                        analisis_file_date = cell_val
+                    elif cell_val:
+                        # Format: '31 March 2026  |  08:21 WIB'
+                        # Buang " WIB", gabung tanggal + jam
+                        raw = str(cell_val).replace("WIB", "").replace("|", " ").split()
+                        raw = " ".join(raw)  # "31 March 2026 08:21"
+                        analisis_file_date = pd.to_datetime(raw, dayfirst=True, errors="coerce")
+                        if pd.isna(analisis_file_date):
+                            analisis_file_date = None
                     wb_prev.close()
         except Exception as e:
             print(f"[WARN] Gagal baca tanggal previous result: {e}")
@@ -2150,6 +2153,109 @@ class ModernRedINVENTRAManager:
                     cell.fill = _fill(bg)
                 return cell
 
+            # ── HELPER: hitung periode dari kolom tanggal ────────
+            def get_periode(df, col_name):
+                """Ambil rentang min-max dari kolom tanggal, format 'd MMMM YYYY - d MMMM YYYY'"""
+                import re as _re
+                if df is None or not isinstance(df, pd.DataFrame):
+                    return "-"
+                matched = None
+                if col_name and col_name in df.columns:
+                    matched = col_name
+                elif col_name:
+                    matched = next(
+                        (c for c in df.columns if _re.search(_re.escape(col_name), str(c), _re.IGNORECASE)),
+                        None
+                    )
+                if not matched:
+                    return "-"
+                try:
+                    series = pd.to_datetime(
+                        df[matched].dropna().astype(str).str.strip(),
+                        format="%Y%m%d", errors="coerce"
+                    ).dropna()
+                    if series.empty:
+                        return "-"
+                    mn = series.min()
+                    mx = series.max()
+                    # format: "1 Januari 2025"
+                    BULAN_ID = {
+                        1:"Januari",2:"Februari",3:"Maret",4:"April",
+                        5:"Mei",6:"Juni",7:"Juli",8:"Agustus",
+                        9:"September",10:"Oktober",11:"November",12:"Desember"
+                    }
+                    def fmt(dt):
+                        return f"{dt.day} {BULAN_ID[dt.month]} {dt.year}"
+                    return f"{fmt(mn)} - {fmt(mx)}" if mn != mx else fmt(mn)
+                except Exception:
+                    return "-"
+
+            # ── Baca mapping dari INVENTRA.json ──────────────────
+            _cfg_map = {}
+            try:
+                if os.path.exists("INVENTRA.json"):
+                    with open("INVENTRA.json", "r") as _f:
+                        _cfg_map = json.load(_f).get("data_mappings", {})
+            except Exception:
+                pass
+
+            def _col_name(section, key):
+                return _cfg_map.get(section, {}).get("columns", {}).get(key, "")
+
+            # ── Baca periode PLJM08 dari file Excel asli (B6:D7) ─
+            pljm08_periode = "-"
+            try:
+                pljm08_file_id = _cfg_map.get("PLJM08", {}).get("source_file_id")
+                pljm08_sheet   = _cfg_map.get("PLJM08", {}).get("sheet_name")
+                if pljm08_file_id and pljm08_file_id in self.uploaded_files:
+                    pljm08_path = self.uploaded_files[pljm08_file_id].get("path")
+                    if pljm08_path and os.path.exists(pljm08_path):
+                        from openpyxl import load_workbook as _lwb
+                        _wb = _lwb(pljm08_path, read_only=True, data_only=True)
+                        _ws = _wb[pljm08_sheet] if pljm08_sheet and pljm08_sheet in _wb.sheetnames else _wb.active
+                        # Syarat: B6 atau B7 mengandung "Full Period", isinya di D6/D7
+                        raw_parts = []
+                        for r in [6, 7]:
+                            label = str(_ws.cell(row=r, column=2).value or "")
+                            if "full period" in label.lower():
+                                val = str(_ws.cell(row=r, column=4).value or "").strip()
+                                if val and val != "None":
+                                    raw_parts.append(val)
+                        if raw_parts:
+                            BULAN_ID = {
+                                1:"Januari",2:"Februari",3:"Maret",4:"April",
+                                5:"Mei",6:"Juni",7:"Juli",8:"Agustus",
+                                9:"September",10:"Oktober",11:"November",12:"Desember"
+                            }
+                            raw_parts.sort()  # sort YYYYMM ascending
+                            formatted = []
+                            for v in raw_parts:
+                                try:
+                                    dt = pd.to_datetime(v, format="%Y%m")
+                                    formatted.append(f"{BULAN_ID[dt.month]} {dt.year}")
+                                except Exception:
+                                    formatted.append(v)
+                            pljm08_periode = " - ".join(formatted)
+                        _wb.close()
+            except Exception as e:
+                print(f"[WARN] Gagal baca periode PLJM08: {e}")
+
+            # ── Hitung periode per sheet ──────────────────────────
+            def get_sheet_periode(key, df):
+                if key in ("ANALISIS SETTING", "ANALISIS NON SETTING"):
+                    return "-"
+                if key in ("PLJM08", "PLJM01"):
+                    return pljm08_periode
+                col_map = {
+                    "SRD":      _col_name("SRD",      "creation_date"),
+                    "SLN":      _col_name("SLN",      "last_acq_date"),
+                    "IR":       _col_name("IR",        "req_by_date"),
+                    "PO":       _col_name("PO",        "order_date"),
+                    "LEVERING": _col_name("LEVERING",  "levering_date"),
+                }
+                date_col = col_map.get(key)
+                return get_periode(df, date_col)
+
             # ── COVER SHEET ──────────────────────────────────────
             def write_cover(ws, ds, now=None):
                 from openpyxl.worksheet.page import PageMargins
@@ -2168,9 +2274,9 @@ class ModernRedINVENTRAManager:
                     left=0.5, right=0.5, top=0.5, bottom=0.5
                 )
 
-                # ── kolom: A=margin, B=No, C=Sheet Name(lebar), D=Rows, E=Cols, F=margin ──
+                # ── kolom: A=margin, B=No, C=Sheet Name(lebar), D=Periode, E=Jumlah Data, F=margin ──
                 # Total 6 kolom, lebih lebar & proporsional
-                col_w = {1: 3, 2: 22, 3: 35, 4: 16, 5: 16, 6: 3}
+                col_w = {1: 3, 2: 22, 3: 30, 4: 40, 5: 16, 6: 3}
                 for col, w in col_w.items():
                     ws.column_dimensions[get_column_letter(col)].width = w
 
@@ -2226,9 +2332,23 @@ class ModernRedINVENTRAManager:
                 fill_row(ws, 7, WHITE, ncols=NCOLS)
 
                 now = datetime.now()
-                mset(ws, 6, 2, 6, 2, "📅  Report Period :",
+
+                # Ambil distric dari df PLJM08
+                import re as _re
+                df_pljm08 = ds.get("PLJM08")
+                distric_str_cover = "-"
+                if df_pljm08 is not None and isinstance(df_pljm08, pd.DataFrame):
+                    distric_col = next(
+                        (c for c in df_pljm08.columns if _re.search(r"d(?:i?s?t?r?i?c|strct)", str(c), _re.IGNORECASE)),
+                        None
+                    )
+                    if distric_col:
+                        vals = df_pljm08[distric_col].dropna().astype(str).unique().tolist()
+                        distric_str_cover = "  |  ".join(sorted(vals)) if vals else "-"
+
+                mset(ws, 6, 2, 6, 2, "📍  Distric :",
                      bold=False, size=10, color=GRAY_MID, bg=WHITE, halign="right")
-                mset(ws, 6, 3, 6, 5, now.strftime("%B %Y"),
+                mset(ws, 6, 3, 6, 5, distric_str_cover,
                      bold=True, size=12, color=RED_MAIN, bg=WHITE, halign="left")
 
                 mset(ws, 7, 2, 7, 2, "🖨  Generated on :",
@@ -2252,9 +2372,9 @@ class ModernRedINVENTRAManager:
 
                 fill_row(ws, 10, WHITE, ncols=NCOLS)
 
-                # table header: No | Sheet Name | Rows | Cols
+                # table header: No | Nama Sheet | Periode | Jumlah Data
                 fill_row(ws, 11, WHITE, ncols=NCOLS)
-                for col, text in [(2, "No"), (3, "Sheet Name"), (4, "Total Rows"), (5, "Total Cols")]:
+                for col, text in [(2, "No"), (3, "Nama Sheet"), (4, "Periode"), (5, "Jumlah Data")]:
                     c = ws.cell(row=11, column=col, value=text)
                     c.font = Font(name="Calibri", bold=True, size=11, color=WHITE)
                     c.fill = _fill(RED_MAIN)
@@ -2271,15 +2391,21 @@ class ModernRedINVENTRAManager:
                     c.font = Font(name="Calibri", bold=True, size=10, color=RED_MAIN)
                     c.fill = _fill(stripe); c.alignment = _align("center"); c.border = _border()
 
-                    c = ws.cell(row=row, column=3, value=key)
+                    # Nama sheet: PLJM08 → PLJM
+                    display_name = "PLJM" if key == "PLJM08" else key
+                    c = ws.cell(row=row, column=3, value=display_name)
                     c.font = Font(name="Calibri", size=10, color=GRAY_TEXT)
                     c.fill = _fill(stripe); c.alignment = _align("left"); c.border = _border()
 
-                    c = ws.cell(row=row, column=4, value=len(df))
+                    # Periode: PLJM08/PLJM01 → "-", lainnya dari helper
+                    periode_val = "-" if key in ("PLJM08", "PLJM01") else get_sheet_periode(key, df)
+                    c = ws.cell(row=row, column=4, value=periode_val)
                     c.font = Font(name="Calibri", size=10, color=GRAY_TEXT)
                     c.fill = _fill(stripe); c.alignment = _align("center"); c.border = _border()
 
-                    c = ws.cell(row=row, column=5, value=len(df.columns))
+                    # Jumlah Data: format ribuan dengan titik (misal 28.831)
+                    jumlah_str = f"{len(df):,}".replace(",", ".")
+                    c = ws.cell(row=row, column=5, value=jumlah_str)
                     c.font = Font(name="Calibri", size=10, color=GRAY_TEXT)
                     c.fill = _fill(stripe); c.alignment = _align("center"); c.border = _border()
 
@@ -2312,7 +2438,7 @@ class ModernRedINVENTRAManager:
                 s = ws.cell(row=2, column=1)
                 if title == "ANALISIS NON SETTING":
                     prev_str = (
-                        f" ---------- previous result : {analisis_file_date.strftime('%d %B %Y, %H:%M')}"
+                        f" ---------- Previous Result : {analisis_file_date.strftime('%d %B %Y, %H:%M')}"
                         if analisis_file_date else ""
                     )
                     s.value = (
