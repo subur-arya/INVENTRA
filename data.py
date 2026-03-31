@@ -168,7 +168,7 @@ def filter_po(df, mapping):
 def filter_levering(df, mapping):
 
     c_stock = col(mapping,"LEVERING","stock_code")
-    c_due_date = col(mapping,"LEVERING","due_site_date")
+    c_due_date = col(mapping,"LEVERING","levering_date")
     c_receipt_status = col(mapping,"LEVERING","receipt_status")
     c_curr_qty = col(mapping,"LEVERING","curr_qty_p")
 
@@ -313,7 +313,7 @@ def proses_pjm08(data, mapping):
     qty_rcv_uop = col(mapping, "SRD", "qty_rcv_uop")
     creation_date = col(mapping, "SRD", "creation_date")
     curr_qty_p = col(mapping, "LEVERING", "curr_qty_p")
-    due_site_date = col(mapping, "LEVERING", "due_site_date")
+    levering_date = col(mapping, "LEVERING", "levering_date")
     supplier_name = col(mapping, "PO", "supplier_name")
 
     map_qty_issued = safe_groupby_first(data["SLN"], c_stock_sln, qty_issued)
@@ -325,8 +325,8 @@ def proses_pjm08(data, mapping):
     map_qty_rcv_uop = safe_groupby_first(data["SRD"], c_stock_srd, qty_rcv_uop)
     map_creation_date = safe_groupby_first(data["SRD"], c_stock_srd, creation_date)
 
-    map_curr_qty_p = safe_groupby_sum(data["LEVERING"], c_stock_po, curr_qty_p)
-    map_due_site_date = safe_groupby_first(data["LEVERING"], c_stock_po, due_site_date)
+    map_curr_qty_p = safe_groupby_sum(data["LEVERING"], c_stock_levering, curr_qty_p)
+    map_levering_date = safe_groupby_first(data["LEVERING"], c_stock_levering, levering_date)
 
     map_supplier_name = safe_groupby_first(data["PO"], c_stock_po, supplier_name)
 
@@ -338,7 +338,7 @@ def proses_pjm08(data, mapping):
     data["PLJM08"]['Qty SRD'] = data["PLJM08"][c_stock_pljm08].map(map_qty_rcv_uop)
     data["PLJM08"]['Last SRD'] = data["PLJM08"][c_stock_pljm08].map(map_creation_date)
     data["PLJM08"]['levering qty'] = data["PLJM08"][c_stock_pljm08].map(map_curr_qty_p)
-    data["PLJM08"]['Due Site Date'] = data["PLJM08"][c_stock_pljm08].map(map_due_site_date)
+    data["PLJM08"]['Levering Date'] = data["PLJM08"][c_stock_pljm08].map(map_levering_date)
     data["PLJM08"]['Suplier Name'] = data["PLJM08"][c_stock_pljm08].map(map_supplier_name)
 
     num_cols = ['Qty ISS','Next Req Qty','Qty SRD','levering qty']

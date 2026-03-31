@@ -525,7 +525,7 @@ class MappingDialog:
                 ("stock_code", "Stock Code", "STOCK_CODE"),
                 ("receipt_status", "Receipt Status", "RECEIPT_STATUS"),
                 ("curr_qty_p", "Current Qty", "CURR_QTY_P"),
-                ("due_site_date", "Due Site Date", "DUE_SITE_DATE")
+                ("levering_date", "Levering Date", "Due Site Date")
             ],
             "ANALISIS SETTING": [
                 ("supplier_name", "Supplier Name", "Supplier Name"),
