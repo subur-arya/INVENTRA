@@ -2310,7 +2310,7 @@ class ModernRedINVENTRAManager:
                 s = ws.cell(row=2, column=1)
                 if title == "ANALISIS NON SETTING":
                     prev_str = (
-                        f"   |   previous result : {analisis_file_date.strftime('%d %B %Y, %H:%M')}"
+                        f" ---------- previous result : {analisis_file_date.strftime('%d %B %Y, %H:%M')}"
                         if analisis_file_date else ""
                     )
                     s.value = (
