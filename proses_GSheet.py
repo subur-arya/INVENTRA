@@ -296,7 +296,7 @@ def fetch_sheet(url, sheet_name):
     full_url = f"{url}?{params}"
     try:
         req = urllib.request.Request(full_url)
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             raw = resp.read().decode("utf-8")
         result = json.loads(raw)
 
