@@ -296,7 +296,7 @@ def fetch_sheet(url, sheet_name):
     full_url = f"{url}?{params}"
     try:
         req = urllib.request.Request(full_url)
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with urllib.request.urlopen(req, timeout=180) as resp:
             raw = resp.read().decode("utf-8")
         result = json.loads(raw)
 
@@ -808,7 +808,7 @@ def push_sheet(url, sheet_name, df, kolom_diisi=None):
     )
     try:
         print(f"[push_sheet] Mengirim POST ke GAS (timeout=60s)...")
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with urllib.request.urlopen(req, timeout=180) as resp:
             http_status = resp.getcode()
             raw_resp    = resp.read().decode("utf-8")
 
