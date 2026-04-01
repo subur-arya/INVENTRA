@@ -1,34 +1,34 @@
 {
     "uploaded_files": {
+        "file_1": {
+            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/INVENTRA_20260310_135031_(LastVers).xlsx",
+            "size": 48974,
+            "filename": "INVENTRA_20260310_135031_(LastVers).xlsx"
+        },
         "file_2": {
-            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PENERIMAAN MATERIAL SRD - 01012024-30042026 (DummyAll).xlsx",
+            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/PENERIMAAN MATERIAL SRD - 01012024-30042026 (DummyAll).xlsx",
             "size": 376759,
             "filename": "PENERIMAAN MATERIAL SRD - 01012024-30042026 (DummyAll).xlsx"
         },
         "file_3": {
-            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PLJM01 (DummyAll).xlsx",
+            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/PLJM01 (DummyAll).xlsx",
             "size": 8157392,
             "filename": "PLJM01 (DummyAll).xlsx"
         },
         "file_4": {
-            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PLJM08 (DummyAll).xlsx",
+            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/PLJM08 (DummyAll).xlsx",
             "size": 3444238,
             "filename": "PLJM08 (DummyAll).xlsx"
         },
         "file_5": {
-            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PO STOCK -  01012024-30042026 (DummyAll).xlsx",
+            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/PO STOCK -  01012024-30042026 (DummyAll).xlsx",
             "size": 430587,
             "filename": "PO STOCK -  01012024-30042026 (DummyAll).xlsx"
         },
         "file_6": {
-            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/SL SOH -  01012024-30042026 (DummyAll).xlsx",
+            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/SL SOH -  01012024-30042026 (DummyAll).xlsx",
             "size": 741390,
             "filename": "SL SOH -  01012024-30042026 (DummyAll).xlsx"
-        },
-        "file_7": {
-            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/INVENTRA_31 March 2026_13-46.xlsx",
-            "size": 4684417,
-            "filename": "INVENTRA_31 March 2026_13-46.xlsx"
         }
     },
     "data_mappings": {
@@ -104,7 +104,7 @@
             }
         },
         "ANALISIS SETTING": {
-            "source_file_id": "file_7",
+            "source_file_id": "file_1",
             "sheet_name": "ANALISIS SETTING",
             "columns": {
                 "supplier_name": "Suplier Name",
@@ -114,7 +114,7 @@
             }
         },
         "ANALISIS NON SETTING": {
-            "source_file_id": "file_7",
+            "source_file_id": "file_1",
             "sheet_name": "ANALISIS NON SETTING",
             "columns": {
                 "supplier_name": "Suplier Name",
