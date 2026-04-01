@@ -66,26 +66,27 @@ class MappingDialog:
         self.dialog.bind("<FocusIn>", self._force_focus)
         self.parent.bind("<FocusIn>", self._force_focus)
 
-        
         # Get screen dimensions
         screen_width = self.dialog.winfo_screenwidth()
         screen_height = self.dialog.winfo_screenheight()
-        
+
+        TITLEBAR_H = 32  # tinggi custom titlebar main window
+
         # Set dialog size (80% of screen)
-        dialog_width = int(screen_width * 0.8)
+        dialog_width  = int(screen_width * 0.8)
         dialog_height = int(screen_height * 0.85)
-        
+
         self.dialog.configure(bg=colors['bg'])
         self.dialog.transient(parent)
-        
-        # Center window
+
+        # Center window — pastikan y tidak masuk ke area titlebar
         x = (screen_width - dialog_width) // 2
-        y = (screen_height - dialog_height) // 2
+        y = max(TITLEBAR_H + 4, (screen_height - dialog_height) // 2)
         self.dialog.geometry(f"{dialog_width}x{dialog_height}+{x}+{y}")
-        
+
         # Prevent resize
         self.dialog.resizable(False, False)
-        
+
         self.create_ui()
 
     def _force_focus(self, event=None):
@@ -151,6 +152,46 @@ class MappingDialog:
             print(f"Error saving settings: {e}")
     
     def create_ui(self):
+        # ── Mini title bar (drag + close) ──
+        MINI_H = 28
+        mini_bar = tk.Frame(self.dialog, bg=self.colors['primary_dark'], height=MINI_H)
+        mini_bar.pack(fill="x")
+        mini_bar.pack_propagate(False)
+
+        tk.Label(
+            mini_bar,
+            text="Data Mapping Configuration",
+            font=("Segoe UI", 9),
+            bg=self.colors['primary_dark'],
+            fg="white"
+        ).pack(side="left", padx=10)
+
+        close_lbl = tk.Label(
+            mini_bar, text="✕",
+            font=("Segoe UI", 10),
+            bg=self.colors['primary_dark'], fg="white",
+            padx=12, cursor="hand2"
+        )
+        close_lbl.pack(side="right")
+        close_lbl.bind("<Enter>",           lambda e: close_lbl.config(bg="#B91C1C"))
+        close_lbl.bind("<Leave>",           lambda e: close_lbl.config(bg=self.colors['primary_dark']))
+        close_lbl.bind("<ButtonRelease-1>", lambda e: self.close_dialog())
+
+        # Drag support
+        def _start_drag(e):
+            mini_bar._dx = e.x_root
+            mini_bar._dy = e.y_root
+        def _do_drag(e):
+            dx = e.x_root - mini_bar._dx
+            dy = e.y_root - mini_bar._dy
+            x  = self.dialog.winfo_x() + dx
+            y  = self.dialog.winfo_y() + dy
+            self.dialog.geometry(f"+{x}+{y}")
+            mini_bar._dx = e.x_root
+            mini_bar._dy = e.y_root
+        mini_bar.bind("<ButtonPress-1>", _start_drag)
+        mini_bar.bind("<B1-Motion>",     _do_drag)
+
         # Header
         header = tk.Frame(self.dialog, bg=self.colors['primary'], height=70)
         header.pack(fill="x")
@@ -1277,8 +1318,8 @@ class ModernRedINVENTRAManager:
         )
         self.main_canvas.configure(yscrollcommand=main_scrollbar.set)
         
-        self.main_canvas.pack(side="left", fill="both", expand=True)
-        main_scrollbar.pack(side="right", fill="y")
+        self.main_canvas.pack(side="left", fill="both", expand=True, pady=(32, 0))
+        main_scrollbar.pack(side="right", fill="y", pady=(32, 0))
         self._lift_titlebar()
         
         # Bind mousewheel
@@ -2192,59 +2233,57 @@ class ModernRedINVENTRAManager:
 
             # ── Baca mapping dari INVENTRA.json ──────────────────
             _cfg_map = {}
+            _cfg_raw = {}
             try:
                 if os.path.exists("INVENTRA.json"):
                     with open("INVENTRA.json", "r") as _f:
-                        _cfg_map = json.load(_f).get("data_mappings", {})
+                        _cfg_raw = json.load(_f)
+                        _cfg_map = _cfg_raw.get("data_mappings", {})
             except Exception:
                 pass
 
             def _col_name(section, key):
                 return _cfg_map.get(section, {}).get("columns", {}).get(key, "")
 
-            # ── Baca periode PLJM08 dari file Excel asli (B6:D7) ─
+            # ── Baca periode PLJM08 dari file Excel asli (B6 saja) ─
+            # ── Baca periode PLJM08 dari file Excel asli (B6 saja) ─
             pljm08_periode = "-"
+            BULAN_ID = {
+                1:"Januari",2:"Februari",3:"Maret",4:"April",
+                5:"Mei",6:"Juni",7:"Juli",8:"Agustus",
+                9:"September",10:"Oktober",11:"November",12:"Desember"
+            }
             try:
                 pljm08_file_id = _cfg_map.get("PLJM08", {}).get("source_file_id")
                 pljm08_sheet   = _cfg_map.get("PLJM08", {}).get("sheet_name")
+
+                # Cari path: coba dari self.uploaded_files dulu, fallback ke uploaded_files di JSON
+                pljm08_path = None
                 if pljm08_file_id and pljm08_file_id in self.uploaded_files:
                     pljm08_path = self.uploaded_files[pljm08_file_id].get("path")
-                    if pljm08_path and os.path.exists(pljm08_path):
-                        from openpyxl import load_workbook as _lwb
-                        _wb = _lwb(pljm08_path, read_only=True, data_only=True)
-                        _ws = _wb[pljm08_sheet] if pljm08_sheet and pljm08_sheet in _wb.sheetnames else _wb.active
-                        # Syarat: B6 atau B7 mengandung "Full Period", isinya di D6/D7
-                        raw_parts = []
-                        for r in [6, 7]:
-                            label = str(_ws.cell(row=r, column=2).value or "")
-                            if "full period" in label.lower():
-                                val = str(_ws.cell(row=r, column=4).value or "").strip()
-                                if val and val != "None":
-                                    raw_parts.append(val)
-                        if raw_parts:
-                            BULAN_ID = {
-                                1:"Januari",2:"Februari",3:"Maret",4:"April",
-                                5:"Mei",6:"Juni",7:"Juli",8:"Agustus",
-                                9:"September",10:"Oktober",11:"November",12:"Desember"
-                            }
-                            raw_parts.sort()  # sort YYYYMM ascending
-                            formatted = []
-                            for v in raw_parts:
-                                try:
-                                    dt = pd.to_datetime(v, format="%Y%m")
-                                    formatted.append(f"{BULAN_ID[dt.month]} {dt.year}")
-                                except Exception:
-                                    formatted.append(v)
-                            pljm08_periode = " - ".join(formatted)
-                        _wb.close()
+                if not pljm08_path:
+                    # Fallback: ambil path langsung dari JSON uploaded_files
+                    pljm08_path = _cfg_raw.get("uploaded_files", {}).get(pljm08_file_id, {}).get("path") if pljm08_file_id else None
+
+                if pljm08_path and os.path.exists(pljm08_path):
+                    from openpyxl import load_workbook as _lwb
+                    _wb = _lwb(pljm08_path, read_only=True, data_only=True)
+                    _ws = _wb[pljm08_sheet] if pljm08_sheet and pljm08_sheet in _wb.sheetnames else _wb.active
+                    b6 = str(_ws.cell(row=6, column=2).value or "")
+                    d6 = str(_ws.cell(row=6, column=4).value or "").strip()
+                    if "full period" in b6.lower() and d6 and d6 != "None":
+                        try:
+                            dt = pd.to_datetime(d6, format="%Y%m")
+                            pljm08_periode = f"{BULAN_ID[dt.month]} {dt.year}"
+                        except Exception:
+                            pljm08_periode = d6
+                    _wb.close()
             except Exception as e:
                 print(f"[WARN] Gagal baca periode PLJM08: {e}")
 
             # ── Hitung periode per sheet ──────────────────────────
             def get_sheet_periode(key, df):
-                if key in ("ANALISIS SETTING", "ANALISIS NON SETTING"):
-                    return "-"
-                if key in ("PLJM08", "PLJM01"):
+                if key in ("PLJM08", "PLJM01", "ANALISIS SETTING", "ANALISIS NON SETTING"):
                     return pljm08_periode
                 col_map = {
                     "SRD":      _col_name("SRD",      "creation_date"),
@@ -2287,11 +2326,11 @@ class ModernRedINVENTRAManager:
                 # row heights
                 rh = {
                     1: 15,   # top margin
-                    2: 65,   # INVENTRA title
-                    3: 22,   # subtitle
+                    2: 50,   # logo row
+                    3: 30,   # logo row lanjutan (merge 2-3)
                     4: 12,   # accent stripe
                     5: 14,   # spacer
-                    6: 24,   # period
+                    6: 24,   # distric
                     7: 20,   # generated date
                     8: 14,   # spacer
                     9: 26,   # CONTENTS heading
@@ -2315,11 +2354,63 @@ class ModernRedINVENTRAManager:
                 for row in range(1, 5):
                     fill_row(ws, row, RED_DARK, ncols=NCOLS)
 
-                mset(ws, 2, 2, 2, 5, "INVENTRA",
-                     bold=True, size=40, color=WHITE, bg=RED_DARK, halign="center")
-                mset(ws, 3, 2, 3, 5, "Inventory Report Analysis",
-                     bold=False, size=12, color=RED_MID, bg=RED_DARK,
-                     halign="center", italic=True)
+                # Logo di rows 2-3, merged B2:E3, tengah
+                # Merge B2:E3 untuk background merah
+                for r in [2, 3]:
+                    for c_idx in range(2, 6):  # B=2 s/d E=5
+                        ws.cell(row=r, column=c_idx).fill = _fill(RED_DARK)
+                ws.merge_cells(start_row=2, start_column=2, end_row=3, end_column=5)
+
+                try:
+                    from openpyxl.drawing.image import Image as XLImage
+                    from openpyxl.utils.units import pixels_to_points
+                    import PIL.Image as PILImage
+                    import io
+
+                    logo_path = resource_path("logo_trsp.png")
+                    pil_img = PILImage.open(logo_path).convert("RGBA")
+                    orig_w, orig_h = pil_img.size
+
+                    # Target tinggi 70px (pas di 2 row)
+                    target_h = 100
+                    target_w = int(orig_w * target_h / orig_h)
+
+                    pil_img = pil_img.resize((target_w, target_h), PILImage.LANCZOS)
+                    buf = io.BytesIO()
+                    pil_img.save(buf, format="PNG")
+                    buf.seek(0)
+                    xl_img = XLImage(buf)
+                    xl_img.width  = target_w
+                    xl_img.height = target_h
+
+                    # Lebar area B-E dalam piksel (1 unit col width ≈ 7px)
+                    area_w_px = sum(
+                        ws.column_dimensions[get_column_letter(c_idx)].width * 7
+                        for c_idx in range(2, 6)
+                    )
+                    # Tinggi area row 2+3 dalam piksel (1pt ≈ 1.33px)
+                    area_h_px = (rh.get(2, 50) + rh.get(3, 30)) * 1.33
+
+                    # Offset agar gambar di tengah
+                    off_x = max(0, int((area_w_px - target_w) / 2))
+                    off_y = max(0, int((area_h_px - target_h) / 2))
+
+                    from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, TwoCellAnchor, OneCellAnchor, AbsoluteAnchor
+                    from openpyxl.utils.units import pixels_to_EMU
+                    from openpyxl.drawing.xdr import XDRPoint2D, XDRPositiveSize2D
+
+                    xl_img.anchor = AbsoluteAnchor(
+                        pos=XDRPoint2D(pixels_to_EMU(off_x + col_w[1] * 7), pixels_to_EMU(rh[1] * 1.33 + off_y)),
+                        ext=XDRPositiveSize2D(pixels_to_EMU(target_w), pixels_to_EMU(target_h))
+                    )
+                    ws.add_image(xl_img)
+
+                except Exception as e:
+                    print(f"[WARN] Gagal load logo: {e}")
+                    mset(ws, 2, 2, 3, 5, "INVENTRA",
+                         bold=True, size=40, color=WHITE, bg=RED_DARK, halign="center")
+                    mset(ws, 2, 2, 3, 5, "INVENTRA",
+                         bold=True, size=40, color=WHITE, bg=RED_DARK, halign="center")
 
                 # accent stripe
                 fill_row(ws, 4, RED_MAIN, ncols=NCOLS)
@@ -2397,8 +2488,8 @@ class ModernRedINVENTRAManager:
                     c.font = Font(name="Calibri", size=10, color=GRAY_TEXT)
                     c.fill = _fill(stripe); c.alignment = _align("left"); c.border = _border()
 
-                    # Periode: PLJM08/PLJM01 → "-", lainnya dari helper
-                    periode_val = "-" if key in ("PLJM08", "PLJM01") else get_sheet_periode(key, df)
+                    # Periode: ambil dari helper untuk semua sheet
+                    periode_val = get_sheet_periode(key, df)
                     c = ws.cell(row=row, column=4, value=periode_val)
                     c.font = Font(name="Calibri", size=10, color=GRAY_TEXT)
                     c.fill = _fill(stripe); c.alignment = _align("center"); c.border = _border()
@@ -2438,7 +2529,7 @@ class ModernRedINVENTRAManager:
                 s = ws.cell(row=2, column=1)
                 if title == "ANALISIS NON SETTING":
                     prev_str = (
-                        f" ---------- Previous Result : {analisis_file_date.strftime('%d %B %Y, %H:%M')}"
+                        f" ---------- previous result : {analisis_file_date.strftime('%d %B %Y, %H:%M')}"
                         if analisis_file_date else ""
                     )
                     s.value = (
