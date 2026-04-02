@@ -197,6 +197,7 @@ def generate_drp_from_amp_df(amp_df, col_mapping):
     col_satuan        = _find_col(amp_df, _cm("col_satuan"))
     col_Vol           = _find_col(amp_df, _cm("col_Vol"))
     col_nilai_kontrak = _find_col(amp_df, _cm("col_nilai_kontrak"))
+    col_ket_status    = _find_col(amp_df, _cm("col_ket_status"))
 
 
     if col_prk is None:
@@ -373,6 +374,7 @@ def generate_drp_from_amp_df(amp_df, col_mapping):
             "Nomor Kontrak"         : _join(group, col_kontrak),
             "Nilai Kontrak"         : _join_nilai_dari_sumber(group),
             "Levering"              : _join(group, col_levering),
+            "Ket. Status"           : _join(group, col_ket_status)
         })
 
     drp_df = pd.DataFrame(hasil)
@@ -413,7 +415,7 @@ def _extract_tanpa_prk(amp_df, col_mapping):
     col_kontrak       = _find_col(amp_df, _cm("col_kontrak"))
     col_nilai_kontrak = _find_col(amp_df, _cm("col_nilai_kontrak"))
     col_levering      = _find_col(amp_df, _cm("col_levering"))
-
+    col_Ket_Status      = _find_col(amp_df, _cm("col_ket_status"))
     if col_prk is None:
         return None
 
@@ -434,7 +436,7 @@ def _extract_tanpa_prk(amp_df, col_mapping):
         cols = ["NO", "Peruntukan", "Item", "Stock Code", "No Requisisi",
                 "Vol", "Satuan", "Tanggal RO", "No RO",
                 "Nilai HPE", "Tanggal Terkontrak", "Nomor Kontrak",
-                "Nilai Kontrak", "Levering"]
+                "Nilai Kontrak", "Levering", "Ket. Status"]
         return pd.DataFrame(columns=cols)
 
     # Susun output memakai nama kanonik (sesuai DRP)
@@ -452,6 +454,7 @@ def _extract_tanpa_prk(amp_df, col_mapping):
     out["Nomor Kontrak"] = df_tanpa_src[col_kontrak].astype(str).str.strip() if col_kontrak else ""
     out["Nilai Kontrak"] = df_tanpa_src[col_nilai_kontrak].astype(str).str.strip() if col_nilai_kontrak else ""
     out["Levering"]      = df_tanpa_src[col_levering].astype(str).str.strip() if col_levering else ""
+    out["Ket. Status"]   = df_tanpa_src[col_Ket_Status].astype(str).str.strip() if col_Ket_Status else ""
 
     # bersihkan literal "nan" dan spasi / nbsp
     out = out.fillna("").astype(str)
@@ -463,10 +466,13 @@ def _extract_tanpa_prk(amp_df, col_mapping):
 
     return out
 def proses_drp(file_path, col_mapping=None, sheet_amp=None):
-    xl          = pd.ExcelFile(file_path)
-    df_amp      = _baca_amp_by_name(xl, sheet_amp) if sheet_amp else _baca_amp(xl)
-    df_drp      = generate_drp_from_amp_df(df_amp, col_mapping)
-    df_tanpa    = _extract_tanpa_prk(df_amp, col_mapping)
+    xl = pd.ExcelFile(file_path)
+    # Langsung baca sheet yang dikirim user, apapun namanya
+    # Kalau tidak ada sheet_amp yang dikirim, pakai sheet pertama
+    sheet_target = sheet_amp if (sheet_amp and sheet_amp in xl.sheet_names) else xl.sheet_names[0]
+    df_amp   = _baca_excel_sheet(xl, sheet_target)
+    df_drp   = generate_drp_from_amp_df(df_amp, col_mapping)
+    df_tanpa = _extract_tanpa_prk(df_amp, col_mapping)
     return {"DRP": df_drp, "AMP": df_amp, "TANPA_PRK": df_tanpa}
 
 
@@ -494,7 +500,7 @@ def merge_drp_dengan_gsheet(df_lokal, sheet_name):
     KOLOM_DRP = [
         "NOMOR PRK", "ITEM PROSES PENGADAAN", "Stock Code", "No Requisisi",
         "Vol", "Satuan", "Tanggal RO", "No RO",
-        "Nilai HPE", "Tanggal Terkontrak", "Nomor Kontrak", "Nilai Kontrak", "Levering",
+        "Nilai HPE", "Tanggal Terkontrak", "Nomor Kontrak", "Nilai Kontrak", "Levering", "Ket. Status"
     ]
 
     # ── Helper: cari kolom di df secara case-insensitive ─────────────────────
@@ -1059,6 +1065,8 @@ class DRPApp:
             ("col_kontrak",       "No Kontrak",      "Nomor Kontrak",         "Tgl PO"),
             ("col_nilai_kontrak", "Nilai Kontrak",   "Nilai Kontrak",         "Supplier.1"),
             ("col_levering",      "Levering",        "Levering",              "Jenis Kontrak"),
+            ("col_ket_status",    "Ket. Status",     "Ket. Status",           "Ket. Status.4"),
+
         ]
         self._col_vars   = {}
         self._amp_combos = []
@@ -1671,7 +1679,7 @@ class DRPApp:
         TEMPLATE_KOLOM = [
             "NOMOR PRK", "ITEM PROSES PENGADAAN", "Stock Code", "No Requisisi",
             "Vol", "Satuan", "Tanggal RO", "No RO",
-            "Nilai HPE", "Tanggal Terkontrak", "Nomor Kontrak", "Nilai Kontrak", "Levering",
+            "Nilai HPE", "Tanggal Terkontrak", "Nomor Kontrak", "Nilai Kontrak", "Levering", "Ket. Status"
         ]
 
         dlg = tk.Toplevel(self.root)
@@ -1760,7 +1768,7 @@ class DRPApp:
         TEMPLATE_KOLOM = [
             "NOMOR PRK", "ITEM PROSES PENGADAAN", "Stock Code", "No Requisisi",
             "Vol", "Satuan", "Tanggal RO", "No RO",
-            "Nilai HPE", "Tanggal Terkontrak", "Nomor Kontrak", "Nilai Kontrak", "Levering",
+            "Nilai HPE", "Tanggal Terkontrak", "Nomor Kontrak", "Nilai Kontrak", "Levering", "Ket. Status"
         ]
 
         dlg = tk.Toplevel(self.root)

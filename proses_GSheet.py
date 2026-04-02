@@ -62,7 +62,7 @@ HEADER_DEFAULT = [
     "Nomor Kontrak",
     "Nilai Kontrak",
     "Levering",
-    "Kedatangan",
+    "Ket. Status",
     "Proses BA",
     "Pembayaran",
 ]

@@ -1,36 +1,5 @@
 {
-    "uploaded_files": {
-        "file_2": {
-            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/PENERIMAAN MATERIAL SRD - 01012024-30042026 (DummyAll).xlsx",
-            "size": 376759,
-            "filename": "PENERIMAAN MATERIAL SRD - 01012024-30042026 (DummyAll).xlsx"
-        },
-        "file_3": {
-            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/PLJM01 (DummyAll).xlsx",
-            "size": 8157392,
-            "filename": "PLJM01 (DummyAll).xlsx"
-        },
-        "file_4": {
-            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/PLJM08 (DummyAll).xlsx",
-            "size": 3444238,
-            "filename": "PLJM08 (DummyAll).xlsx"
-        },
-        "file_5": {
-            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/PO STOCK -  01012024-30042026 (DummyAll).xlsx",
-            "size": 430587,
-            "filename": "PO STOCK -  01012024-30042026 (DummyAll).xlsx"
-        },
-        "file_6": {
-            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/SL SOH -  01012024-30042026 (DummyAll).xlsx",
-            "size": 741390,
-            "filename": "SL SOH -  01012024-30042026 (DummyAll).xlsx"
-        },
-        "file_7": {
-            "path": "C:/Users/Hype G12/OneDrive/Dokumen/Magang/INVENTRA_31 March 2026_16-21.xlsx",
-            "size": 4446597,
-            "filename": "INVENTRA_31 March 2026_16-21.xlsx"
-        }
-    },
+    "uploaded_files": {},
     "data_mappings": {
         "PLJM01": {
             "source_file_id": "file_3",
