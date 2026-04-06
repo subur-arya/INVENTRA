@@ -857,6 +857,7 @@ KOLOM_DRP = [
     "NOMOR PRK", "ITEM PROSES PENGADAAN", "Stock Code", "No Requisisi",
     "Vol", "Satuan", "Tanggal RO", "No RO",
     "Nilai HPE", "Tanggal Terkontrak", "Nomor Kontrak", "Nilai Kontrak", "Levering",
+    "Ket. Status"
 ]
 
 # ============================================================
@@ -867,6 +868,7 @@ _KOLOM_DRP_LOWER = {k.strip().lower() for k in [
     "NOMOR PRK", "ITEM PROSES PENGADAAN", "Stock Code", "No Requisisi",
     "Vol", "Satuan", "Tanggal RO", "No RO",
     "Nilai HPE", "Tanggal Terkontrak", "Nomor Kontrak", "Nilai Kontrak", "Levering",
+    "Ket. Status"
 ]}
 
 KOLOM_MANUAL = [
