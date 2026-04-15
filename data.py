@@ -359,16 +359,17 @@ def proses_pjm08(data, mapping):
     )
 
     cond0  = (data["PLJM08"][roq_col] == 0) & (data["PLJM08"]['Next Req Qty'] == 0)
-    # cond01 = (data["PLJM08"][roq_col] == 0) & (data["PLJM08"]['Next Req Qty'] != 0)
+    cond01 = (data["PLJM08"][roq_col] == 0) & (data["PLJM08"]['Next Req Qty'] != 0)
     cond1  = data["PLJM08"]['levering qty'] > (data["PLJM08"][rop_col] + data["PLJM08"][roq_col])
     cond2  = calc > data["PLJM08"][rop_col]
     cond3  = calc < data["PLJM08"][rop_col]
     cond4  = calc == data["PLJM08"][rop_col]
 
     data["PLJM08"]['QTY_RO'] = np.select(
-        [cond0, cond1, cond2, cond3, cond4],
+        [cond0, cond01, cond1, cond2, cond3, cond4],
         [
             0,
+            -1,
             -1,
             0,
             (data["PLJM08"][rop_col] + data["PLJM08"][roq_col]) - calc,
@@ -484,7 +485,7 @@ def analisis_setting(data, mapping):
     return _proses_analisis(
         data, mapping,
         key="ANALISIS SETTING",
-        roq_filter=lambda df: df["ROQ"] >= 0
+        roq_filter=lambda df: df["ROQ"] != 0
     )
 
 
