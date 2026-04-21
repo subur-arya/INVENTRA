@@ -427,13 +427,17 @@ def _proses_analisis(data, mapping, key, roq_filter):
     map_item_name = col(mapping, key, "item_name")
     map_analisis  = col(mapping, key, "analisis")
 
-    df_lama = data[key][[map_supplier, map_sc, map_item_name, map_analisis]].copy()
-    df_lama = df_lama.rename(columns={
-        map_supplier:  "Suplier Name lama",
-        map_sc:        "Stock Code",
-        map_item_name: "Item Name lama",
-        map_analisis:  "Keterangan lama"
-    })
+    required_cols = [map_supplier, map_sc, map_item_name, map_analisis]
+    if data[key].empty or not all(c in data[key].columns for c in required_cols):
+        df_lama = pd.DataFrame(columns=["Suplier Name lama", "Stock Code", "Item Name lama", "Keterangan lama"])
+    else:
+        df_lama = data[key][required_cols].copy()
+        df_lama = df_lama.rename(columns={
+            map_supplier:  "Suplier Name lama",
+            map_sc:        "Stock Code",
+            map_item_name: "Item Name lama",
+            map_analisis:  "Keterangan lama"
+        })
 
     df_analisis["Stock Code"] = df_analisis["Stock Code"].astype(str).str.zfill(9)
     df_lama["Stock Code"]     = df_lama["Stock Code"].astype(str).str.zfill(9)
@@ -532,11 +536,15 @@ def analisis_non_setting(data, mapping):
     map_sc       = col(mapping, key, "stock_code")
     map_analisis = col(mapping, key, "analisis")
 
-    df_lama = data[key][[map_sc, map_analisis]].copy()
-    df_lama = df_lama.rename(columns={
-        map_sc:       "Stock Code",
-        map_analisis: "Keterangan lama"
-    })
+    required_cols = [map_sc, map_analisis]
+    if data[key].empty or not all(c in data[key].columns for c in required_cols):
+        df_lama = pd.DataFrame(columns=["Stock Code", "Keterangan lama"])
+    else:
+        df_lama = data[key][required_cols].copy()
+        df_lama = df_lama.rename(columns={
+            map_sc:       "Stock Code",
+            map_analisis: "Keterangan lama"
+        })
 
     df_analisis["Stock Code"] = df_analisis["Stock Code"].astype(str).str.zfill(9)
     df_lama["Stock Code"]     = df_lama["Stock Code"].astype(str).str.zfill(9)

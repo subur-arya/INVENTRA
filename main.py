@@ -588,12 +588,25 @@ class MappingDialog:
         """Validate and save mappings"""
 
         mappings = {}
+        OPTIONAL_TYPES = {"ANALISIS SETTING", "ANALISIS NON SETTING"}
 
         for data_type, widgets in self.widgets.items():
             source_file = widgets['source_file_var'].get()
             sheet_name = widgets['sheet_name_var'].get()
 
+            headers = {}
+            for field_key, obj in widgets['header_vars'].items():
+                headers[field_key] = obj["var"].get()
+
             if not source_file or not sheet_name:
+                if data_type in OPTIONAL_TYPES:
+                    # Tidak ada file riwayat, lewati saja
+                    mappings[data_type] = {
+                        "source_file_id": None,
+                        "sheet_name": None,
+                        "columns": headers
+                    }
+                    continue
                 messagebox.showwarning(
                     "Incomplete Mapping",
                     f"Please select source file and sheet for {data_type}"
@@ -601,10 +614,6 @@ class MappingDialog:
                 return
 
             file_id = self.filename_to_id.get(source_file)
-
-            headers = {}
-            for field_key, obj in widgets['header_vars'].items():
-                headers[field_key] = obj["var"].get()
 
             mappings[data_type] = {
                 "source_file_id": file_id,
@@ -1866,11 +1875,24 @@ class ModernRedINVENTRAManager:
     def process_data_with_mapping(self, mappings):
         """Process data setelah mapping dikonfigurasi"""
         try:
+            OPTIONAL_TYPES = {"ANALISIS SETTING", "ANALISIS NON SETTING"}
+
             # Map data dari uploaded files
             for data_type, mapping in mappings.items():
                 file_id = mapping['source_file_id']
                 sheet_name = mapping['sheet_name']
-                
+
+                # Jika source file kosong dan ini opsional -> pakai DataFrame kosong
+                if not file_id or not sheet_name:
+                    if data_type in OPTIONAL_TYPES:
+                        self.data_store[data_type] = pd.DataFrame()
+                        continue
+                    messagebox.showwarning(
+                        "File Not Found",
+                        f"{data_type}: No file selected"
+                    )
+                    return
+
                 if file_id in self.uploaded_files:
                     if sheet_name in self.uploaded_files[file_id]['sheets']:
                         self.data_store[data_type] = self.uploaded_files[file_id]['sheets'][sheet_name].copy()
@@ -1886,9 +1908,9 @@ class ModernRedINVENTRAManager:
                         f"{data_type}: File '{file_id}' not uploaded"
                     )
                     return
-            
-            # Check if all data is available
-            REQUIRED_SECTIONS = ["PLJM08", "SRD", "SLN", "IR", "PO", "LEVERING", "ANALISIS SETTING", "ANALISIS NON SETTING"]
+
+            # Check if all required data is available (ANALISIS bersifat opsional)
+            REQUIRED_SECTIONS = ["PLJM08", "SRD", "SLN", "IR", "PO", "LEVERING"]
             missing = [key for key in REQUIRED_SECTIONS if self.data_store.get(key) is None]
             if missing:
                 messagebox.showwarning(
