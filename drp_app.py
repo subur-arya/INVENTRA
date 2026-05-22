@@ -1,3 +1,34 @@
+# =============================================================================
+# FILE: drp_app.py
+# PERAN DALAM PROJECT: Modul DRP (Distribution Requirement Planning)
+#
+# File ini adalah modul terpisah dari INVENTRA utama. Tugasnya:
+#   1. Membaca file Excel AMP (Analisis Material Pengadaan) dari user
+#   2. Mengekstrak dan mengklasifikasikan nomor PRK dari setiap baris
+#   3. Menghasilkan tabel DRP yang terstruktur (satu baris per PRK)
+#   4. Menyediakan UI tersendiri (DRPApp) yang dibuka dari Module Chooser
+#   5. Mensinkronisasi data DRP ke Google Sheets via proses_GSheet.py
+#
+# KONTEKS BISNIS:
+#   DRP digunakan tim pengadaan untuk memonitor status pengadaan barang
+#   dari tahap permintaan (PRK) hingga kontrak dan pembayaran.
+#   PRK = Perintah Kerja — kode identifikasi pengadaan internal perusahaan.
+#
+# JENIS PRK YANG DIKENALI:
+#   ┌─────────────────┬─────────────────────────────────────────────────────┐
+#   │ Kategori        │ Contoh / Ciri                                       │
+#   ├─────────────────┼─────────────────────────────────────────────────────┤
+#   │ PRK I (AI)      │ GR254A0205 — huruf A, 3 digit sebelumnya, ke-3='4' │
+#   │ AO              │ GR253A0205 — huruf A tapi digit ke-3 bukan '4'      │
+#   │ PRK GABUNGAN    │ GR254A0205 GR253A0205 — lebih dari 1 nomor PRK     │
+#   │ Tanpa PRK       │ 121046 / "PEKERJAAN SIPIL" — tidak ada nomor PRK   │
+#   └─────────────────┴─────────────────────────────────────────────────────┘
+#
+# ALUR DATA:
+#   File Excel AMP → baca sheet AMP → extract PRK (regex) →
+#   klasifikasikan PRK → groupby PRK (satu baris per PRK) →
+#   preview di UI → sync ke Google Sheets
+# =============================================================================
 import re
 import tkinter as tk
 from tkinter import ttk, filedialog
@@ -8,6 +39,15 @@ from proses_GSheet import (
     sync_ke_gsheet, fetch_sheet, merge_with_existing, WEB_APP_URL,
     SheetTidakDitemukanError, HeaderTidakDitemukanError, GSheetResponseError,
 )
+
+# PRK_PATTERN: regex untuk mengenali nomor PRK dalam teks.
+# Dua variasi yang didukung:
+#   Variasi 1: (GR)?angka(2+)huruf(1-2)angka(2+)
+#              Contoh: GR254A0205, GR21AB0101, 254A0205 (tanpa prefix GR)
+#   Variasi 2: angka murni ≥6 digit yang berdiri sendiri
+#              (?<![.\d]) = lookbehind: tidak ada titik/digit sebelumnya
+#              (?![.\d])  = lookahead:  tidak ada titik/digit sesudahnya
+#              Tanpa lookbehind/lookahead, "123.456789" bisa salah di-match
 PRK_PATTERN = re.compile(
     r'(?:GR)?\d{2,}[A-Z]{1,2}\d{2,}'    # angka + huruf + angka
     r'|'
@@ -16,15 +56,21 @@ PRK_PATTERN = re.compile(
 
 
 def resource_path(relative_path):
+    # Kembalikan path file yang benar di dua mode:
+    # - Development (.py): os.path.abspath(".") = direktori kerja
+    # - Production (.exe via PyInstaller): sys._MEIPASS = folder temp ekstraksi
     base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
     return os.path.join(base_path, relative_path)
 
 
 # =====================================================
-# LOGIKA
+# LOGIKA — fungsi-fungsi pemrosesan data AMP
 # =====================================================
 
 def _find_col(df, col_name):
+    # Cari nama kolom di DataFrame secara case-insensitive.
+    # Return: nama kolom asli (dengan casing aslinya), atau None jika tidak ditemukan.
+    # Berguna karena nama kolom di Excel sering tidak konsisten huruf besar/kecilnya.
     if not col_name:
         return None
     target = col_name.strip().lower()
@@ -32,6 +78,10 @@ def _find_col(df, col_name):
 
 
 def _baca_sheet(xl, sheet, col_no_prk):
+    # Baca satu sheet dari ExcelFile dengan auto-detect baris header.
+    # Strategi: cari baris yang mengandung col_no_prk (nama kolom kunci yang diketahui).
+    # File ERP sering punya beberapa baris kosong/metadata sebelum baris header.
+    # Return: DataFrame dengan header yang benar, atau None jika tidak ditemukan.
     try:
         temp = pd.read_excel(xl, sheet_name=sheet, header=None)
     except Exception:
@@ -50,6 +100,11 @@ def _baca_sheet(xl, sheet, col_no_prk):
 
 
 def _merge_by_no_prk(df, col_no_prk):
+    # Gabungkan baris-baris dengan NOMOR PRK yang sama menjadi satu baris.
+    # Satu PRK di AMP bisa punya banyak baris (satu item per baris).
+    # Aturan agregasi:
+    #   - Kolom numerik: ambil nilai PERTAMA (first) — biasanya sama antar baris
+    #   - Kolom teks   : gabungkan nilai unik dengan ", " sebagai separator
     actual = _find_col(df, col_no_prk)
     if actual is None:
         return df
@@ -69,6 +124,11 @@ def _merge_by_no_prk(df, col_no_prk):
 
 
 def _detect_header_row(temp, keywords=None, min_cols=5):
+    # Deteksi baris header berdasarkan keywords yang diketahui.
+    # Dua strategi (berurutan):
+    #   1. Keyword search: cari baris yang mengandung salah satu keyword
+    #      dan punya minimal min_cols nilai tidak kosong (bukan baris metadata)
+    #   2. Fallback: baris pertama yang punya ≥ min_cols nilai tidak kosong
     if keywords:
         for i, row in temp.iterrows():
             vals = row.astype(str).str.strip().str.lower()
@@ -79,6 +139,10 @@ def _detect_header_row(temp, keywords=None, min_cols=5):
 
 
 def _baca_excel_sheet(xl, sheet_name):
+    # Baca sheet Excel dengan auto-detect header.
+    # Keyword yang dicari di baris header: "no requisisi", "peruntukan", "stockcode"
+    # — kata-kata yang biasanya ada di baris header sheet AMP.
+    # Nama kolom dibersihkan dari whitespace dan non-breaking space (\u00A0).
     try:
         temp = pd.read_excel(xl, sheet_name=sheet_name, header=None)
     except Exception:
@@ -94,16 +158,23 @@ def _baca_excel_sheet(xl, sheet_name):
 
 
 def _baca_amp(xl):
+    # Baca sheet bernama "AMP" secara otomatis (case-insensitive).
+    # Buat lookup dict {NAMA_UPPER: nama_asli} agar pencarian case-insensitive.
     sheet_upper = {s.strip().upper(): s for s in xl.sheet_names}
     sheet_amp = sheet_upper.get("AMP")
     return _baca_excel_sheet(xl, sheet_amp) if sheet_amp else None
 
 
 def _baca_amp_by_name(xl, sheet_name):
+    # Baca sheet AMP dengan nama eksplisit dari user (hasil pilihan ComboBox di UI).
     return _baca_excel_sheet(xl, sheet_name)
 
 
 def _baca_drp_sheet(xl, sheet_name, auto_name="DRP"):
+    # Baca sheet DRP dari Excel — sheet yang berisi data DRP periode sebelumnya.
+    # Dipakai untuk merge/update: data DRP baru digabung dengan data DRP lama.
+    # dtype=str agar stock code "000123456" tidak dikonversi ke angka 123456.
+    # Baris yang NOMOR PRK-nya kosong atau duplikat header dihapus.
     if sheet_name is None:
         sheet_upper = {s.strip().upper(): s for s in xl.sheet_names}
         sheet_name  = sheet_upper.get(auto_name)
@@ -174,6 +245,14 @@ def klasifikasi_prk(prk):
     return "AO"
 
 def generate_drp_from_amp_df(amp_df, col_mapping):
+    # Proses utama: ubah DataFrame AMP mentah menjadi tabel DRP terstruktur.
+    # PROSES:
+    #   1. Petakan kolom AMP ke nama standar via col_mapping dari INVENTRA.json
+    #   2. Ekstrak nomor PRK + nama item dari setiap sel (bisa multi-line/mixed)
+    #   3. Normalisasi nomor PRK (pastikan ada prefix GR jika ada huruf)
+    #   4. Filter baris yang tidak valid (PRK kosong / terlalu pendek)
+    #   5. groupby PRK → satu baris per PRK, nilai multi-baris digabung dengan "\n"
+    # Hasil: DataFrame DRP dengan kolom standar (NOMOR PRK, ITEM, Vol, dll.)
     if amp_df is None:
         return None
 
@@ -181,6 +260,7 @@ def generate_drp_from_amp_df(amp_df, col_mapping):
     amp_df.columns = amp_df.columns.str.strip()
 
     def _cm(key):
+        # Ambil nama kolom AMP dari col_mapping berdasarkan key internal
         return col_mapping.get(key, {}).get("amp", "")
 
     col_prk           = _find_col(amp_df, _cm("col_no_prk"))
@@ -258,7 +338,9 @@ def generate_drp_from_amp_df(amp_df, col_mapping):
 
     # NORMALISASI PRK
     def normalize_prk(prk):
-
+        # Normalisasi format PRK ke format standar.
+        # Hanya token yang cocok pola PRK yang dipertahankan.
+        # Token berhuruf yang belum punya prefix "GR" → ditambahkan "GR".
         if pd.isna(prk):
             return ""
 
@@ -283,6 +365,7 @@ def generate_drp_from_amp_df(amp_df, col_mapping):
 
     amp_df["PRK"] = [normalize_prk(v) for v in amp_df["PRK"]]
 
+    # Filter: buang baris PRK kosong, "NAN", atau terlalu pendek (< 4 karakter)
     amp_df = amp_df[
         (amp_df["PRK"] != "") &
         (amp_df["PRK"].str.upper() != "NAN") &
@@ -295,6 +378,9 @@ def generate_drp_from_amp_df(amp_df, col_mapping):
     amp_df = amp_df.sort_values(["Kategori PRK", "PRK"])
     
     def _join(group, col):
+        # Gabungkan nilai dalam satu grup PRK menjadi string multi-line (\n).
+        # Nilai kosong/NaN → string kosong (bukan "nan" atau "None").
+        # Angka float yang sebenarnya integer (misal 100.0) → hapus ".0".
         n = len(group)
         if not col:
             return "\n" * (n - 1)
@@ -312,7 +398,11 @@ def generate_drp_from_amp_df(amp_df, col_mapping):
                 baris.append(s)
 
         return "\n".join(baris)
+
     def _join_hpe(group):
+        # Nilai HPE hanya diisi jika ada Tanggal Selesai yang valid.
+        # Jika Tanggal Selesai kosong → HPE dikosongkan.
+        # Logika ini karena HPE yang valid biasanya sudah punya tanggal selesai kontrak.
         # Iterasi langsung via kolom array — tanpa print debug, tanpa .loc[]
         baris = []
         tgl_vals = group[col_tgl_selesai].tolist() if col_tgl_selesai else [None] * len(group)
@@ -328,7 +418,11 @@ def generate_drp_from_amp_df(amp_df, col_mapping):
         return "\n".join(baris)
 
     def _join_nilai_dari_sumber(group):
+        # Hitung Nilai Kontrak per baris = Nilai Kontrak × Volume.
+        # Jika salah satu kosong → baris dikosongkan.
+        # Hasil diformat dengan pemisah ribuan (1,000,000) tanpa desimal.
         def _to_float(v):
+            # Konversi nilai ke float, return 0 jika gagal/kosong/NaN
             if v is None or (isinstance(v, float) and pd.isna(v)):
                 return 0
             s = str(v).strip().replace(",", "").replace(" ", "")
@@ -353,6 +447,7 @@ def generate_drp_from_amp_df(amp_df, col_mapping):
         return "\n".join(baris)
     
 
+    # GroupBy PRK → satu baris per PRK, multi-item digabung dengan "\n"
     amp_df = amp_df.sort_values(["Kategori PRK","PRK"])
     hasil = []
     for prk, group in amp_df.groupby("PRK", sort=False):

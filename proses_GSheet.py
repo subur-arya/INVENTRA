@@ -1,3 +1,40 @@
+# =============================================================================
+# FILE: proses_GSheet.py
+# PERAN DALAM PROJECT: Jembatan antara INVENTRA (lokal) dan Google Sheets (cloud)
+#
+# File ini menangani sinkronisasi data DRP ke Google Sheets melalui
+# Google Apps Script (GAS) Web App — bukan Google Sheets API langsung.
+#
+# ARSITEKTUR KOMUNIKASI:
+#   INVENTRA App (lokal)
+#       │  HTTP GET / POST (urllib)
+#       ▼
+#   Google Apps Script Web App  ← server-side JavaScript di Google
+#       │  Spreadsheet API (internal Google)
+#       ▼
+#   Google Sheets (online)
+#
+# MENGAPA PAKAI GAS, BUKAN GOOGLE SHEETS API LANGSUNG?
+#   - Tidak butuh OAuth / service account credential yang kompleks
+#   - GAS sudah punya akses penuh ke spreadsheet milik akun yang deploy-nya
+#   - Lebih mudah di-deploy tanpa infrastruktur tambahan
+#
+# STRUKTUR DATA DI GOOGLE SHEETS:
+#   Sheet "MONITORING DRP {tahun}" tersusun dari seksi-seksi per kategori PRK:
+#     ##COVER_TITLE##  ← judul & info generate
+#     ##SEKSI##AO      ← label pemisah seksi (di-styling oleh GAS)
+#     ##HEADER##       ← baris header kolom
+#     [data AO]
+#     ##EMPTY##        ← baris kosong visual
+#     ##SEKSI##PRK I
+#     ...
+#
+# KOLOM DIISI OTOMATIS vs KOLOM MANUAL:
+#   KOLOM_DRP    = 14 kolom dari data AMP lokal (INVENTRA update saat sync)
+#   KOLOM_MANUAL = 24 kolom sisanya dari HEADER_DEFAULT (diisi manual di GSheet)
+#   Saat sync, kolom manual TIDAK ditimpa agar input user di GSheet aman.
+# =============================================================================
+
 from datetime import datetime
 import pandas as pd
 import json
@@ -5,13 +42,20 @@ import urllib.request
 import urllib.parse
 
 
+# WEB_APP_URL : endpoint Google Apps Script yang sudah di-deploy sebagai Web App
+# GSHEET_URL  : URL spreadsheet untuk dibuka di browser
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzqUyf2wpSUFdVPtV_qZ1DZsGxpmdBcEfUsNuvws1bKvAKqARolJYQUGLbyfg4Z-4ZU/exec"
 GSHEET_URL  = "https://docs.google.com/spreadsheets/d/1q65xJgzOg9rSD2L6IDVfOUQUkoAsTKCGUr1aq5oOkJA/edit?usp=sharing"
 
 # Kolom yang nilainya harus diperlakukan sebagai teks murni
+# Di Google Sheets, angka seperti "000123456" bisa dikonversi jadi 123456 otomatis.
+# Prefix apostrof (') di depan nilai memaksa GSheet memperlakukannya sebagai teks.
 _KOLOM_TEKS = {"NOMOR PRK", "No RO", "Stock Code", "STOCK CODE"}
 
 # Urutan seksi kategori di GSheet
+# Format: (key_internal, label_tampilan_di_sheet)
+# key_internal  = nilai Kategori PRK dari klasifikasi_prk() di drp_app.py
+# label_tampilan= teks yang ditulis ke GSheet sebagai header seksi
 SEKSI_KATEGORI = [
     ("AO",           "AO"),
     ("AI",           "PRK I"),
@@ -20,11 +64,20 @@ SEKSI_KATEGORI = [
 ]
 
 # Penanda baris label seksi (nilai di kolom NOMOR PRK)
+# GAS mengenali prefix ini dan memberi styling berbeda (warna, bold)
+# pada baris yang NOMOR PRK-nya dimulai dengan ##SEKSI##
 _LABEL_PREFIX = "##SEKSI##"
 
 # ============================================================
 # Header default GSheet — dipakai saat sheet baru/kosong tidak punya header.
 # Urutan kolom ini adalah urutan resmi yang akan ditulis ke GSheet.
+#
+# Ini adalah "kontrak" antara INVENTRA dan GSheet:
+#   Kolom 1-7   : data DRP otomatis dari AMP (KOLOM_DRP)
+#   Kolom 8-31  : kolom manual yang diisi tim pengadaan di GSheet
+#   Kolom 32-38 : data DRP otomatis lainnya (Tanggal RO s.d. Pembayaran)
+#
+# Urutan ini WAJIB dipertahankan agar GAS bisa menulis ke kolom yang benar.
 # ============================================================
 HEADER_DEFAULT = [
     "NO",
@@ -70,9 +123,17 @@ HEADER_DEFAULT = [
 
 # ============================================================
 # Exception khusus
+# Tiga exception ini memberikan pesan error yang spesifik dan informatif
+# ke UI (drp_app.py) sehingga dialog yang ditampilkan ke user tepat sasaran.
+# Masing-masing membawa atribut tambahan (sheet_name, kolom_hilang, pesan_gas)
 # ============================================================
 class SheetTidakDitemukanError(Exception):
-    """Dilempar ketika sheet target tidak ada di Google Sheets."""
+    """
+    Dilempar ketika sheet target tidak ada di Google Sheets.
+    Contoh: sheet "MONITORING DRP 2025" belum dibuat di spreadsheet.
+    UI akan menampilkan dialog instruksi cara membuat sheet baru.
+    Atribut: sheet_name (str) — nama sheet yang tidak ditemukan.
+    """
     def __init__(self, sheet_name):
         self.sheet_name = sheet_name
         super().__init__(sheet_name)
@@ -83,6 +144,7 @@ class HeaderTidakDitemukanError(Exception):
     Dilempar ketika sheet ditemukan dan berisi data,
     namun tidak ada baris header yang mengandung kolom 'NOMOR PRK'.
     Ini menandakan struktur sheet rusak atau tidak sesuai template.
+    Atribut: sheet_name (str), kolom_hilang (list) — kolom yang tidak ketemu.
     """
     def __init__(self, sheet_name, kolom_hilang=None):
         self.sheet_name   = sheet_name
@@ -93,6 +155,8 @@ class HeaderTidakDitemukanError(Exception):
 class GSheetResponseError(Exception):
     """
     Dilempar ketika push_sheet mendapat respons error dari Google Apps Script.
+    Bisa terjadi karena GAS quota habis, permission berubah, atau bug di GAS.
+    Atribut: pesan_gas (str) — pesan error yang dikembalikan GAS.
     """
     def __init__(self, pesan_gas):
         self.pesan_gas = pesan_gas
@@ -101,6 +165,13 @@ class GSheetResponseError(Exception):
 
 # ============================================================
 # Helper: paksa nilai sebagai teks (anti scientific notation)
+#
+# Di Google Sheets, nilai seperti "000123456" (stock code) atau
+# "GR254A0205" (nomor PRK) bisa dikonversi otomatis ke angka / format lain.
+# Solusi: tambahkan prefix apostrof (') di depan nilai.
+# Di GSheet, apostrof di awal sel = paksa sel diperlakukan sebagai teks.
+# Contoh: _force_text("000123456") → "'000123456"
+#         GSheet menampilkan: 000123456 (apostrof tidak terlihat user)
 # ============================================================
 def _force_text(val):
     s = str(val).strip() if val is not None else ""
@@ -117,6 +188,11 @@ def _force_text(val):
 # Kolom df_sumber yang namanya sama (case-insensitive) dengan
 # kolom di df_acuan / list acuan akan di-rename ke nama versi
 # acuan. Kolom yang benar-benar baru dibiarkan apa adanya.
+#
+# Masalah yang diselesaikan: nama kolom bisa tidak konsisten huruf
+# besar/kecilnya. Misal data lokal punya "stock code" tapi GSheet
+# punya "Stock Code" — tanpa normalisasi, merge akan gagal karena
+# dianggap dua kolom berbeda.
 #
 # Parameter:
 #   df       — DataFrame yang kolomnya akan dinormalisasi
@@ -142,6 +218,14 @@ def _normalisasi_kolom(df, acuan):
 # ============================================================
 # Helper: susun df menjadi seksi-seksi berdasarkan kategori
 # Setiap seksi diawali baris label (NOMOR PRK = ##SEKSI##<nama>)
+#
+# MENGAPA PAKAI MARKER ROWS (##SEKSI##, ##HEADER##, ##EMPTY##)?
+# Karena kita mengirim SATU DataFrame ke GAS via satu POST request.
+# GAS perlu tahu mana yang baris data biasa dan mana yang instruksi
+# styling/pemisah. Daripada dua API call, kita encode instruksi
+# langsung dalam data menggunakan baris marker berformat khusus.
+# GAS membaca prefix "##" dan memperlakukannya secara khusus
+# (styling bold/berwarna, tidak ditulis sebagai data biasa).
 # ============================================================
 def susun_per_seksi(df, kolom_kategori="Kategori PRK", cover_info=None):
     """
@@ -232,6 +316,9 @@ def susun_per_seksi(df, kolom_kategori="Kategori PRK", cover_info=None):
 # Cek apakah sheet sudah ada
 # ============================================================
 # Cache gid sheet — diisi saat check_sheet_exists berhasil
+# gid (Grid ID) adalah identifier numerik per tab di Google Sheets.
+# Disimpan di cache agar get_gsheet_url() bisa membentuk URL langsung
+# ke tab yang benar (format: .../edit#gid=GID) tanpa perlu hit GAS lagi.
 _sheet_gid_cache = {}
 
 
@@ -853,6 +940,8 @@ def push_sheet(url, sheet_name, df, kolom_diisi=None):
 # ============================================================
 
 # Kolom yang diisi otomatis dari kode (data AMP)
+# Kolom-kolom ini akan di-UPDATE saat sync — nilainya dari data lokal INVENTRA.
+# Kolom lain di HEADER_DEFAULT (KOLOM_MANUAL) dipertahankan dari GSheet.
 KOLOM_DRP = [
     "NOMOR PRK", "ITEM PROSES PENGADAAN", "Stock Code", "No Requisisi",
     "Vol", "Satuan", "Tanggal RO", "No RO",
@@ -863,6 +952,8 @@ KOLOM_DRP = [
 # ============================================================
 # Kolom manual = HEADER_DEFAULT dikurangi KOLOM_DRP
 # Nilainya dipertahankan dari GSheet saat update.
+# Ini adalah kolom yang diisi secara manual oleh tim pengadaan di GSheet,
+# misal: DASPEN, TORRAB, METODE PENGADAAN, ANALISA RISIKO, dll.
 # ============================================================
 _KOLOM_DRP_LOWER = {k.strip().lower() for k in [
     "NOMOR PRK", "ITEM PROSES PENGADAAN", "Stock Code", "No Requisisi",

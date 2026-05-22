@@ -1,3 +1,31 @@
+# =============================================================================
+# FILE: main.py
+# PERAN DALAM PROJECT: Entry point & pusat kendali seluruh aplikasi INVENTRA
+#
+# File ini adalah file TERBESAR dan TERPENTING. Mengintegrasikan semua
+# komponen: data.py, drp_app.py, tutorial.py, dan proses_GSheet.py.
+#
+# DUA KELAS UTAMA:
+#   1. MappingDialog  → dialog konfigurasi kolom Excel ke field program
+#   2. ModernRedINVENTRAManager → main window (fullscreen, multi-layar)
+#
+# ARSITEKTUR LAYAR (State Machine):
+#   START → [Splash Screen] → [Module Chooser] → [Main App] atau [DRPApp]
+#
+#   Splash   : animasi progress bar + buat INVENTRA.json (dual sync mechanism)
+#   Chooser  : dua tombol Canvas rounded — "Settingan" / "Proses DRP"
+#   Main App : Upload → Process (MappingDialog) → Preview → Save Excel
+#   DRPApp   : Upload AMP → Proses DRP → Preview → Sync ke GSheet
+#
+# KONFIGURASI PERSISTEN: INVENTRA.json
+#   Mapping kolom + path file yang diupload disimpan di INVENTRA.json.
+#   User tidak perlu re-konfigurasi setiap kali membuka aplikasi.
+#
+# THREADING MODEL:
+#   Tkinter single-threaded → semua operasi UI di main thread.
+#   Operasi berat (baca Excel, simpan Excel, cek internet) di background
+#   thread, hasilnya dikembalikan ke main thread via root.after().
+# =============================================================================
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import data
@@ -12,6 +40,9 @@ from drp_app import DRPApp
 from proses_GSheet import WEB_APP_URL
 import threading
 
+# pywinstyles: opsional — mengubah warna title bar Windows agar sesuai tema merah.
+# Tidak wajib. Jika tidak tersedia, title bar tetap default Windows.
+# Hanya bekerja di Windows 10 v1809+ dan Windows 11.
 try:
     import pywinstyles
     PYWINSTYLES_AVAILABLE = True
@@ -38,6 +69,10 @@ def resource_path(relative_path):
 
 
 class MappingDialog:
+    # Dialog konfigurasi yang muncul saat user klik "⚙ Process".
+    # Menghubungkan "kolom di Excel user" dengan "field yang dibutuhkan program".
+    # Menggunakan overrideredirect(True) agar tampilannya custom (bukan dialog OS).
+    # Modal: grab_set() memblokir input ke window lain selama dialog terbuka.
     def __init__(self, parent, colors, uploaded_files, callback, overlay=None):
         self.parent = parent
         self.colors = colors
@@ -63,6 +98,8 @@ class MappingDialog:
         self.dialog.bind("<Escape>", lambda e: self.close_dialog())
 
         # ===== FIX ALT+TAB FOCUS LOST =====
+        # Saat user Alt+Tab lalu kembali, paksa fokus ke dialog.
+        # Tanpa ini, dialog bisa kehilangan fokus dan user tidak bisa mengetik.
         self.dialog.bind("<FocusIn>", self._force_focus)
         self.parent.bind("<FocusIn>", self._force_focus)
 
@@ -105,7 +142,12 @@ class MappingDialog:
 
         
     def load_settings(self):
-        """Load settings dari JSON"""
+        """
+        Load settings dari INVENTRA.json.
+        Pola: default_settings → update dengan nilai tersimpan per key (bukan replace semua).
+        Ini memastikan key baru yang ditambahkan ke default tidak hilang
+        meskipun JSON lama tidak memilikinya.
+        """
         default_settings = {
             "data_mappings": {
                 "PLJM01": {"source_file_id": None, "sheet_name": None, "columns": {}},
@@ -134,7 +176,11 @@ class MappingDialog:
         return default_settings
     
     def save_settings(self):
-        """Save settings ke JSON"""
+        """
+        Save settings ke INVENTRA.json.
+        Pola: load existing → update data_mappings saja → save.
+        Tidak menghapus kunci lain yang sudah ada di JSON (misal: uploaded_files).
+        """
         try:
             # Load existing settings
             existing = {}
@@ -644,6 +690,13 @@ class MappingDialog:
 
 
 class ModernRedINVENTRAManager:
+    # Kelas utama — mengelola seluruh siklus hidup aplikasi INVENTRA.
+    # TANGGUNG JAWAB:
+    #   - Inisialisasi window (fullscreen, custom titlebar merah, ikon)
+    #   - Manajemen state: uploaded_files (Excel yang diupload) dan
+    #     data_store (DataFrame hasil proses — semua None di awal)
+    #   - Navigasi antar layar via pola "destroy lama → buat baru"
+    #   - Persistensi konfigurasi ke INVENTRA.json
     def __init__(self, root):
         self.root = root
         try:
@@ -660,10 +713,13 @@ class ModernRedINVENTRAManager:
         self.root.bind("<Escape>", lambda e: self.root.quit())
         
         # Data store untuk file yang diupload
+        # Format: {file_id: {path, sheets:{sheet_name:DataFrame}, size, filename}}
+        # file_id dibuat otomatis: "file_1", "file_2", dst (via file_counter)
         self.uploaded_files = {}
         self.file_counter = 0
         
-        # Data store untuk data yang sudah dimapping
+        # Data store untuk data yang sudah dimapping dan diproses
+        # Semua None di awal — terisi setelah user selesai MappingDialog + Process
         self.data_store = {
             "PLJM01": None,
             "PLJM08": None,
@@ -676,10 +732,15 @@ class ModernRedINVENTRAManager:
             "ANALISIS NON SETTING": None,
         }
         
-        # Current selected view
+        # Current selected view — key data yang sedang ditampilkan di Treeview
         self.current_view = None
         
-        # Modern Red Color Scheme
+        # Modern Red Color Scheme — semua warna di satu dict agar mudah konsisten
+        # primary       = merah utama (tombol, header)
+        # primary_light = merah sangat muda (latar info, tips)
+        # primary_dark  = merah gelap (hover, titlebar)
+        # success       = hijau (tombol Process)
+        # warning       = kuning/amber (tombol Save Excel)
         self.colors = {
             'primary': '#dc2626',
             'primary_light': '#fee2e2',
@@ -799,7 +860,12 @@ class ModernRedINVENTRAManager:
             pass
 
     def load_from_json(self):
-        """Load settings dan uploaded files dari JSON"""
+        """
+        Load settings dan uploaded files dari INVENTRA.json.
+        Hanya menyimpan PATH dan metadata file (bukan DataFrame itu sendiri
+        karena terlalu besar). DataFrame dibaca ulang dari disk via read_excel_auto_header.
+        File yang sudah tidak ada di disk otomatis dilewati.
+        """
         try:
             if os.path.exists("INVENTRA.json"):
                 with open("INVENTRA.json", "r") as f:
@@ -826,7 +892,7 @@ class ModernRedINVENTRAManager:
                                         'filename': file_info.get('filename', '')
                                     }
                                     
-                                    # Update file counter
+                                    # Update file counter agar file_id baru tidak tabrakan
                                     if file_id.startswith("file_"):
                                         num = int(file_id.split("_")[1])
                                         self.file_counter = max(self.file_counter, num)
@@ -836,7 +902,11 @@ class ModernRedINVENTRAManager:
             print(f"Error loading settings: {e}")
     
     def save_to_json(self):
-        """Save uploaded files info ke JSON"""
+        """
+        Save daftar uploaded files ke INVENTRA.json.
+        Pola: load existing → update uploaded_files saja → save.
+        DataFrame tidak disimpan (terlalu besar), hanya path dan metadata.
+        """
         try:
             # Load existing settings
             settings = {}
@@ -863,7 +933,15 @@ class ModernRedINVENTRAManager:
             print(f"Error saving to JSON: {e}")
         
     def show_splash_screen(self):
-        """Show animated splash screen on startup"""
+        """
+        Tampilkan splash screen animasi saat startup.
+        DUAL SYNC MECHANISM:
+          - Animasi progress bar (main thread, ~2 detik via root.after)
+          - Pengecekan/pembuatan INVENTRA.json (background thread)
+        Splash tidak hilang sampai KEDUANYA selesai (_splash_anim_done
+        dan _splash_json_done sama-sama True).
+        Ini memastikan JSON sudah siap sebelum masuk ke aplikasi.
+        """
         self.splash = tk.Frame(self.root, bg=self.colors['primary'])
         self.splash.place(x=0, y=32, relwidth=1, relheight=1)
         self._lift_titlebar()
@@ -905,6 +983,8 @@ class ModernRedINVENTRAManager:
         progress_container = tk.Frame(logo_container, bg=self.colors['primary'])
         progress_container.pack()
         
+        # Progress bar: Canvas rectangle yang diperpanjang tiap tick animasi
+        # Lebar canvas 400px → 1 unit progress = 4px
         progress_bg = tk.Canvas(
             progress_container,
             width=400,
@@ -930,6 +1010,9 @@ class ModernRedINVENTRAManager:
         self.animate_progress(progress_bg, 0)
 
     # ── Default JSON ────────────────────────────────────────────────────────────
+    # Template konfigurasi yang ditulis ke INVENTRA.json saat pertama kali dijalankan.
+    # Berisi struktur lengkap dengan semua nilai null/kosong.
+    # Nilai ini diisi user via MappingDialog saat pertama kali menggunakan aplikasi.
 
     DEFAULT_JSON = {
         "uploaded_files": {},
@@ -998,7 +1081,13 @@ class ModernRedINVENTRAManager:
             self.root.after(0, self._try_finish_splash)
 
     def animate_progress(self, canvas, progress):
-        """Animate the progress bar"""
+        """
+        Animasi progress bar 0→100 via rekursi root.after(20ms).
+        Setiap tick: panjang bar = progress * 4px (canvas 400px / 100 = 4px per unit).
+        Total durasi ~2 detik (100 tick × 20ms).
+        Pesan loading berubah setiap 20 unit progress (5 pesan untuk rentang 0-100).
+        Setelah 100 → set _splash_anim_done = True, lalu coba finish splash.
+        """
         if progress <= 100:
             canvas.coords(self.progress_bar, 0, 0, progress * 4, 6)
 
@@ -1025,6 +1114,12 @@ class ModernRedINVENTRAManager:
             self.show_module_chooser()
 
     def show_module_chooser(self):
+        # Bersihkan semua widget kecuali custom titlebar,
+        # lalu tampilkan layar pemilihan modul.
+        # Tombol dibuat menggunakan Canvas (bukan Button) agar bisa
+        # rounded rectangle — Button Tkinter tidak support rounded corner.
+        # draw_btn() dipanggil ulang untuk setiap state hover/klik
+        # untuk mensimulasikan 3-state button (normal, hover, klik).
         for w in self.root.winfo_children():
             try:
                 if w is self._titlebar:
@@ -1099,6 +1194,10 @@ class ModernRedINVENTRAManager:
         btn_frame.place(relx=0.5, rely=0.63, anchor="center")
 
         def make_canvas_btn(parent, icon_file, label, command):
+            # Tombol rounded rectangle menggunakan Canvas.
+            # Teknik: 4 arc di sudut + 2 rectangle di tengah = rounded rect.
+            # draw_btn(fill): gambar ulang semua elemen dengan warna fill.
+            # Dipanggil saat hover (abu-abu muda), klik (abu-abu), dan release.
             W, H, R = 220, 220, 22
             ICON_SIZE = 120
             LABEL_H   = 45
@@ -1115,11 +1214,12 @@ class ModernRedINVENTRAManager:
             except Exception:
                 photo = None
 
+            # Simpan referensi photo di canvas agar tidak di-garbage collect Python
             canvas._photo = photo
 
             def draw_btn(fill):
                 canvas.delete("all")
-                # Rounded rect
+                # Rounded rect: 4 arc sudut + 2 rectangle isi
                 canvas.create_arc(0,       0,       2*R,   2*R,   start=90,  extent=90,  fill=fill, outline=fill)
                 canvas.create_arc(W-2*R,   0,       W,     2*R,   start=0,   extent=90,  fill=fill, outline=fill)
                 canvas.create_arc(0,       H-2*R,   2*R,   H,     start=180, extent=90,  fill=fill, outline=fill)
@@ -1150,6 +1250,9 @@ class ModernRedINVENTRAManager:
         make_canvas_btn(btn_frame, "icon_drp.png",       "Proses DRP", self._open_drp)
 
     def _back_to_chooser(self):
+        # Kembali ke Module Chooser dari layar manapun.
+        # Unbind scroll dulu agar tidak ada handler mouse wheel yang menggantung.
+        # Hapus semua widget kecuali titlebar, lalu tampilkan chooser.
         try:
             self.main_canvas.unbind_all("<MouseWheel>")
         except Exception:
@@ -1165,6 +1268,7 @@ class ModernRedINVENTRAManager:
         self.show_module_chooser()
 
     def _open_inventra(self):
+        # Buka modul INVENTRA: destroy chooser → loading screen → load JSON+Excel → setup_ui
         if hasattr(self, "_chooser_frame"):
             self._chooser_frame.destroy()
         self._show_loading_screen(
@@ -1181,10 +1285,12 @@ class ModernRedINVENTRAManager:
         self.root.after(0, self._finish_inventra)
 
     def _finish_inventra(self):
+        # Sembunyikan loading screen, lalu tampilkan main UI INVENTRA
         self._hide_loading_screen()
         self.setup_ui()
 
     def _open_drp(self):
+        # Buka modul DRP: destroy chooser → loading screen → cek koneksi GSheet → buka DRPApp
         if hasattr(self, "_chooser_frame"):
             self._chooser_frame.destroy()
         self._show_loading_screen(
@@ -1208,6 +1314,10 @@ class ModernRedINVENTRAManager:
         self.root.after(0, self._finish_drp)
 
     def _finish_drp(self):
+        # Sembunyikan loading screen, lalu buka DRPApp.
+        # Callback back(): hapus semua widget kecuali titlebar, kembali ke chooser.
+        # lift_titlebar diteruskan ke DRPApp agar DRPApp bisa memanggil
+        # _lift_titlebar() saat membuat layar baru di dalam DRPApp.
         self._hide_loading_screen()
 
         def back():
@@ -1226,7 +1336,13 @@ class ModernRedINVENTRAManager:
     # ── Loading Screen ─────────────────────────────────────────────────────────
 
     def _show_loading_screen(self, message, thread_target):
-        """Tampilkan loading screen, lalu jalankan thread_target di background"""
+        """
+        Tampilkan loading screen dengan indeterminate sliding bar,
+        lalu jalankan thread_target di background thread.
+        Berbeda dengan splash bar (determinate 0-100%), loading bar
+        bergerak bolak-balik tanpa henti sampai _hide_loading_screen() dipanggil.
+        Animasi berjalan ~60fps (root.after setiap 16ms).
+        """
         self._loading_frame = tk.Frame(self.root, bg=self.colors['primary'])
         self._loading_frame.place(x=0, y=32, relwidth=1, relheight=1)
         self._lift_titlebar()
@@ -1263,7 +1379,7 @@ class ModernRedINVENTRAManager:
         )
         self._loading_msg_label.pack(pady=(0, 20))
 
-        # Progress bar animasi
+        # Progress bar animasi indeterminate (sliding 120px di canvas 360px)
         prog_bg = tk.Canvas(
             container,
             width=360, height=6,
@@ -1281,7 +1397,12 @@ class ModernRedINVENTRAManager:
         thread.start()
 
     def _animate_loading_bar(self):
-        """Animasi indeterminate loading bar (bolak-balik)"""
+        """
+        Animasi indeterminate loading bar (bolak-balik).
+        _loading_progress maju 3 per tick, modulo 120 → restart dari awal.
+        Blok bar panjang 120px bergerak dari start_x ke start_x+120 di canvas 360px.
+        Berhenti otomatis saat canvas sudah di-destroy (winfo_exists() = False).
+        """
         if not hasattr(self, "_loading_canvas") or not self._loading_canvas.winfo_exists():
             return
 
@@ -1294,13 +1415,18 @@ class ModernRedINVENTRAManager:
         self._loading_anim_id = self.root.after(16, self._animate_loading_bar)
 
     def _hide_loading_screen(self):
-        """Hentikan animasi dan hapus loading screen"""
+        """Batalkan animasi loading bar dan hapus loading frame dari widget tree."""
         if hasattr(self, "_loading_anim_id"):
             self.root.after_cancel(self._loading_anim_id)
         if hasattr(self, "_loading_frame") and self._loading_frame.winfo_exists():
             self._loading_frame.destroy()
         
     def setup_ui(self):
+        # Bangun main UI modul INVENTRA dengan Canvas scrollable.
+        # Canvas + Scrollbar diperlukan karena konten bisa melebihi tinggi layar
+        # (banyak file diupload + tabel data besar).
+        # pady=(32,0) agar canvas dimulai tepat di bawah custom titlebar (tinggi 32px).
+        # Canvas bind Configure → update lebar canvas_window agar selalu mengisi lebar layar.
         # Main container with scrollbar
         self.main_canvas = tk.Canvas(self.root, bg=self.colors['bg'], highlightthickness=0)
         main_scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=self.main_canvas.yview)
@@ -1331,7 +1457,7 @@ class ModernRedINVENTRAManager:
         main_scrollbar.pack(side="right", fill="y", pady=(32, 0))
         self._lift_titlebar()
         
-        # Bind mousewheel
+        # Bind mousewheel hanya saat kursor ada di atas canvas
         self.main_canvas.bind("<Enter>", self._bind_mousewheel)
         self.main_canvas.bind("<Leave>", self._unbind_mousewheel)
         
@@ -1348,6 +1474,10 @@ class ModernRedINVENTRAManager:
         self.create_data_preview()
         
     def create_header(self):
+        # Header merah tinggi 130px di bagian paling atas.
+        # Kiri: logo aplikasi (proporsional max 300x120).
+        # Kanan: tombol "❓ Help" (buka TutorialScreen) dan "← Kembali" (ke chooser).
+        # Tombol menggunakan 3-state binding (normal/hover/klik) untuk feedback visual.
         header_frame = tk.Frame(self.scrollable_frame, bg=self.colors['primary'], height=130)
         header_frame.pack(fill="x", side="top")
         header_frame.pack_propagate(False)
@@ -1429,6 +1559,9 @@ class ModernRedINVENTRAManager:
         back_btn.bind("<ButtonRelease-1>", lambda e: back_btn.config(bg=hover_color))
 
     def open_tutorial(self):
+        # Buka TutorialScreen sebagai overlay di atas main window.
+        # TutorialScreen menggunakan .place(relwidth=1, relheight=1) sehingga
+        # menutup seluruh area di bawah custom titlebar.
         TutorialScreen(self.root, self.colors, None)
         
     def create_upload_section(self):
@@ -2738,7 +2871,18 @@ class ModernRedINVENTRAManager:
     
     def read_excel_auto_header(self, file_path, sheet_name):
         """
-        Baca excel dan otomatis cari baris header.
+        Baca Excel dan otomatis cari baris header.
+        Masalah yang diselesaikan: file ERP sering punya beberapa baris
+        kosong atau metadata sebelum baris header yang sebenarnya.
+
+        Strategi:
+        1. Baca seluruh sheet tanpa header (header=None)
+        2. Cari baris yang mengandung "stock code" DAN variasi "district"
+           (Dstrct, Distric, District, dll) — keduanya harus ada di baris yang sama
+        3. Baca ulang file dengan header=header_row yang ditemukan
+        4. Normalisasi nama kolom: strip whitespace + ganti non-breaking space
+
+        Fallback: jika tidak ditemukan, pakai pd.read_excel bawaan (header=0).
         Baris dianggap header jika mengandung 'Stock Code' DAN
         salah satu variasi kata 'District' (Dstrct, Distric, District, dll).
         """
@@ -2778,6 +2922,8 @@ class ModernRedINVENTRAManager:
 
 
 
+# Entry point: hanya dieksekusi jika main.py dijalankan langsung (bukan diimport).
+# Lifecycle Tkinter: Tk() → setup UI → mainloop() (blokir sampai window ditutup).
 if __name__ == "__main__":
     root = tk.Tk()
     app = ModernRedINVENTRAManager(root)
