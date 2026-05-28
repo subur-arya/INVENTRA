@@ -644,6 +644,6 @@ File ini dibuat otomatis saat pertama kali aplikasi dijalankan. Berisi dua bagia
 ---
 
 <p align="center">
-  Dikembangkan selama program Magang — Semester 6<br/>
+  Dikembangkan selama program Magang Semester 6 Mei 2026<br/>
   Universitas Negeri Surabaya (UNESA)
 </p>
