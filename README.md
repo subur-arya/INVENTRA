@@ -129,7 +129,7 @@ INVENTRA 1.7/
 ├── 📁 rumus_slide/             # Folder slide PNG penjelasan rumus dari proses seettingan
 │   └── *.png                   # File-file gambar halaman penjelasan rumus
 │
-├── 📁 build/                   # Folder output sementara PyInstaller
+├── 📁 dist/                    # Folder output .exe PyInstaller
 ├── 📁 .vscode/                 # Konfigurasi editor VS Code
 └── 📁 __pycache__/             # Cache bytecode Python (auto-generated)
 ```
