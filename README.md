@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <b>An innovative inventory management solution</b><br/>
-  Aplikasi desktop untuk analisis dan monitoring pengadaan material — dikembangkan selama program magang di bidang Inventory Management.
+  <b>INVENTORI REPORT ANALISIS</b><br/>
+  Aplikasi desktop untuk analisis dan monitoring pengadaan material yang dikembangkan selama program magang di bidang Inventori PT PLN Nusantara Power UP Gresik.
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 - [Penjelasan File Python](#penjelasan-file-python)
 - [Penjelasan File Aset](#penjelasan-file-aset)
 - [Alur Kerja Aplikasi](#alur-kerja-aplikasi)
-- [Formula Kalkulasi Inventory](#formula-kalkulasi-inventory)
+- [Formula Kalkulasi Inventory](#formula-kalkulasi-inventori)
 - [Cara Menjalankan](#cara-menjalankan)
 - [Build ke EXE](#build-ke-exe)
 - [Konfigurasi INVENTRA.json](#konfigurasi-inventrajson)
@@ -39,11 +39,11 @@
 
 ## Tentang INVENTRA
 
-**INVENTRA** adalah aplikasi manajemen inventory berbasis desktop yang dibangun menggunakan Python (Tkinter). Aplikasi ini dirancang untuk membantu tim pengadaan dan gudang dalam:
+**INVENTRA** adalah aplikasi manajemen inventori berbasis desktop yang dibangun menggunakan Python (Tkinter). Aplikasi ini dirancang untuk membantu tim inventori dalam:
 
 1. **Menganalisis kebutuhan reorder** — menentukan item mana yang perlu dipesan ulang berdasarkan parameter ROP (Re-Order Point) dan ROQ (Re-Order Quantity).
-2. **Memonitor status pengadaan** — melalui modul DRP (Distribution Requirement Planning) yang terhubung ke Google Sheets secara online.
-3. **Memproses data dari sistem ERP** — dengan membaca file Excel dari berbagai sumber data (PLJM, SRD, SLN, IR, PO, LEVERING) dan menggabungkannya secara otomatis.
+2. **Memonitor status pengadaan** — melalui modul DRP (Dokumen Rencana Pengadaan) yang terhubung ke Google Sheets secara online.
+3. **Memproses data dari sistem PLN** — dengan membaca file Excel dari berbagai sumber data (PLJM, SRD, SLN, IR, PO, LEVERING) dan menggabungkannya secara otomatis.
 
 Aplikasi ini dapat dikompilasi menjadi file `.exe` menggunakan PyInstaller sehingga dapat dijalankan tanpa instalasi Python di komputer pengguna.
 
@@ -54,10 +54,10 @@ Aplikasi ini dapat dikompilasi menjadi file `.exe` menggunakan PyInstaller sehin
 | Fitur | Deskripsi |
 |-------|-----------|
 | 📂 **Upload Multi-File** | Upload beberapa file Excel sekaligus dengan auto-detect baris header |
-| ⚙️ **Flexible Column Mapping** | Konfigurasi nama kolom Excel via dialog — mendukung berbagai format file ERP |
+| ⚙️ **Flexible Column Mapping** | Konfigurasi nama kolom Excel via dialog sehingga mendukung berbagai format file ERP |
 | 📊 **Kalkulasi Otomatis** | Hitung ROP, ROQ, proyeksi stok, dan klasifikasi ORDER / TIDAK ORDER / PERLU REVIEW |
 | 💾 **Export Excel** | Simpan hasil analisis ke file `.xlsx` dengan styling lengkap (header berwarna, freeze pane, autofilter) |
-| 🔄 **Sync Google Sheets** | Kirim data DRP ke Google Sheets via Google Apps Script, dengan smart merge (data manual user tidak terhapus) |
+| 🔄 **Sync Google Sheets** | Kirim data DRP ke Google Sheets via Google Apps Script (GAS), dengan smart merge (data manual user tidak terhapus) |
 | 📋 **Modul DRP** | Kelola data pengadaan berdasarkan nomor PRK dengan klasifikasi otomatis (PRK I, AO, Gabungan, Tanpa PRK) |
 | ❓ **Tutorial In-App** | Panduan penggunaan interaktif langsung di dalam aplikasi |
 | 💾 **Konfigurasi Persisten** | Semua pengaturan disimpan di `INVENTRA.json` — tidak perlu konfigurasi ulang setiap sesi |
@@ -105,34 +105,31 @@ Aplikasi ini dapat dikompilasi menjadi file `.exe` menggunakan PyInstaller sehin
 INVENTRA 1.7/
 │
 ├── 📄 main.py                  # Entry point & main window aplikasi
-├── 📄 data.py                  # Engine kalkulasi inventory (filter + ROP/ROQ)
-├── 📄 drp_app.py               # Modul DRP — UI dan logika pengadaan
+├── 📄 data.py                  # Proses perhitungan data dan filterisasi
+├── 📄 drp_app.py               # Modul DRP dengan berisi UI dan logika pemrosesan filter file AMP
 ├── 📄 proses_GSheet.py         # Sinkronisasi data ke Google Sheets
 ├── 📄 tutorial.py              # Layar tutorial in-app
 │
 ├── 📄 INVENTRA.json            # Konfigurasi persisten (mapping kolom + path file)
-├── 📄 build_app.spec           # Konfigurasi build PyInstaller (lengkap)
-├── 📄 main.spec                # Konfigurasi build PyInstaller (alternatif)
+├── 📄 build_app.spec           # Konfigurasi build PyInstaller untuk menjadikannya ke `.exe`
 ├── 📄 build to apk.txt         # Catatan perintah build
 │
 ├── 🖼️ logo_app.ico             # Ikon aplikasi (format Windows .ico)
-├── 🖼️ logo_app.png             # Ikon aplikasi (format PNG, fallback)
+├── 🖼️ logo_app.png             # Ikon aplikasi (format PNG)
 ├── 🖼️ logo_trsp.png            # Logo INVENTRA transparan (splash + header)
 ├── 🖼️ inventraabt.png          # Gambar halaman About di tutorial
-├── 🖼️ icon_settingan.png       # Ikon tombol "Settingan" di Module Chooser
-├── 🖼️ icon_drp.png             # Ikon tombol "Proses DRP" di Module Chooser
+├── 🖼️ icon_settingan.png       # Ikon tombol Settingan
+├── 🖼️ icon_drp.png             # Ikon tombol Proses DRP
 │
 ├── 🖼️ tutorial_upload.png      # Gambar langkah 1 tutorial (Upload File)
 ├── 🖼️ tutorial_mapping.png     # Gambar langkah 2 tutorial (Mapping)
 ├── 🖼️ tutorial_preview.png     # Gambar langkah 3 tutorial (Preview & Save)
 ├── 🖼️ tutorial_reset.png       # Gambar langkah 4 tutorial (Reset)
 │
-├── 📁 rumus_slide/             # Folder slide PNG penjelasan logika kalkulasi
-│   └── *.png                   # File slide diurutkan alfabetis saat ditampilkan
+├── 📁 rumus_slide/             # Folder slide PNG penjelasan rumus dari proses seettingan
+│   └── *.png                   # File-file gambar halaman penjelasan rumus
 │
 ├── 📁 build/                   # Folder output sementara PyInstaller
-├── 📁 dist/                    # Folder output .exe PyInstaller
-├── 📁 venv/                    # Virtual environment Python
 ├── 📁 .vscode/                 # Konfigurasi editor VS Code
 └── 📁 __pycache__/             # Cache bytecode Python (auto-generated)
 ```
@@ -152,7 +149,7 @@ Dialog konfigurasi yang muncul saat user klik `⚙ Process`. Bertugas menghubung
 
 ```
 Mengapa perlu dialog ini?
-Setiap instansi mungkin punya nama kolom Excel yang berbeda.
+Setiap periode instansi mungkin punya nama kolom Excel yang berbeda.
 Contoh: "STOCK_CODE" vs "Stock Code" vs "Material No."
 MappingDialog memungkinkan konfigurasi tanpa mengubah kode program.
 ```
@@ -194,13 +191,13 @@ File ini adalah "otak" pemrosesan data. Tidak memiliki UI, murni logika bisnis.
 
 | Sumber | Keterangan | Filter Utama |
 |--------|-----------|--------------|
-| `PLJM01` | Tabel master parameter (ROP & ROQ per item) | — (dipakai untuk VLOOKUP) |
-| `PLJM08` | Tabel utama inventory (SOH, info item) | — (tabel referensi utama) |
-| `SRD` | Stock Receipt Document — penerimaan barang | `qty_rcv_uop > 0` |
-| `SLN` | Stock Line — pengeluaran barang dari gudang | `qty_req > 0` AND `qty_issued > 0` |
-| `IR` | Item Request — permintaan barang mendatang | `qty_issued == 0` AND `req_by_date >= hari ini` |
-| `PO` | Purchase Order — order ke supplier | `receipt_status == 2` AND `curr_qty != 0` |
-| `LEVERING` | Pengiriman dari supplier yang akan datang | `receipt_status == 0` AND `due_date >= (hari ini - 60 hari)` |
+| `PLJM01` | Tabel master parameter (ROP & ROQ per item) | (dipakai untuk VLOOKUP) |
+| `PLJM08` | Tabel utama inventory (SOH, info item) | (tabel referensi utama) |
+| `SRD` | Stock Receipt Document >> laporan penerimaan material dari supplier | `qty_rcv_uop > 0` |
+| `SLN` | Service Level >> laporan pengeluaran material dari Gudang unit kerja | `qty_req > 0` AND `qty_issued > 0` |
+| `IR` | Issue Requisition >> laporan data permintaan material yang belum terpenuhi | `qty_issued == 0` AND `req_by_date >= hari ini` |
+| `PO` | Purchase Order >> laporan data pemesanan material stock yang sudah diterima gudang | `receipt_status == 2` AND `curr_qty != 0` |
+| `LEVERING` | laporan data pemesanan material yang belum diterima gudang | `receipt_status == 0` AND `due_date >= (hari ini - 60 hari)` |
 
 **Teknik penggabungan data (proses_pjm08):**
 
@@ -338,7 +335,7 @@ self.tutorial_frame.place(x=0, y=0, relwidth=1, relheight=1)
 |------|--------|
 | **ⓘ About** | Gambar `inventraabt.png` di-resize proporsional ke lebar layar |
 | **Tutorial** | 4 step panduan (Upload → Mapping → Preview → Reset), masing-masing dengan gambar dan tips |
-| **Logika** | Slide PNG dari folder `rumus_slide/` (diurutkan alfabetis) |
+| **Logika** | Slide PNG dari folder `rumus_slide/` |
 
 **Scrollable canvas pattern (standar Tkinter):**
 ```python
@@ -361,20 +358,19 @@ self.rumus_images.append(photo)  # simpan di list instance
 
 | File | Ukuran | Keterangan |
 |------|--------|-----------|
-| `logo_app.ico` | 1.0 MB | Ikon aplikasi format Windows `.ico` — dipakai oleh `root.iconbitmap()` dan PyInstaller |
-| `logo_app.png` | 356 KB | Ikon aplikasi format PNG — fallback jika `.ico` gagal, juga dipakai di custom titlebar (20×20px) |
-| `logo_trsp.png` | 98 KB | Logo INVENTRA dengan background transparan — dipakai di splash screen, loading screen, dan header main app |
-| `inventraabt.png` | 273 KB | Gambar halaman "About INVENTRA" — ditampilkan di sidebar tutorial |
+| `logo_app.ico` | 1.0 MB | Ikon aplikasi format Windows `.ico` dipakai oleh `root.iconbitmap()` dan PyInstaller |
+| `logo_app.png` | 356 KB | Ikon aplikasi format PNG, fallback jika `.ico` gagal, juga dipakai di custom titlebar (20×20px) |
+| `logo_trsp.png` | 98 KB | Logo INVENTRA dengan background transparan yang dipakai di splash screen, loading screen, dan header main app |
+| `inventraabt.png` | 273 KB | Gambar halaman "About INVENTRA"  ditampilkan di sidebar tutorial |
 | `icon_settingan.png` | 161 KB | Ikon tombol "Settingan" di Module Chooser |
 | `icon_drp.png` | 173 KB | Ikon tombol "Proses DRP" di Module Chooser |
-| `tutorial_upload.png` | 222 KB | Screenshot langkah Upload — ditampilkan di panel Tutorial |
+| `tutorial_upload.png` | 222 KB | Screenshot langkah Upload yang ditampilkan di panel Tutorial |
 | `tutorial_mapping.png` | 149 KB | Screenshot langkah Mapping |
 | `tutorial_preview.png` | 54 KB | Screenshot langkah Preview & Save |
 | `tutorial_reset.png` | 198 KB | Screenshot langkah Reset |
-| `rumus_slide/*.png` | — | Slide-slide penjelasan logika kalkulasi ROP/ROQ — diurutkan alfabetis saat ditampilkan |
+| `rumus_slide/*.png` | — | Slide-slide penjelasan logika kalkulasi ROP/ROQ |
 | `INVENTRA.json` | 4 KB | File konfigurasi persisten (mapping kolom + path file yang pernah diupload) |
-| `build_app.spec` | 1.6 KB | Konfigurasi build PyInstaller lengkap (daftar aset yang di-bundle ke EXE) |
-| `main.spec` | 695 B | Konfigurasi build PyInstaller alternatif (minimal) |
+| `build_app.spec` | 1.6 KB | Konfigurasi build PyInstaller (daftar aset yang di-bundle ke EXE) |
 | `build to apk.txt` | 46 B | Catatan perintah build PyInstaller |
 
 ---
@@ -501,13 +497,13 @@ Membandingkan hasil analisis saat ini dengan data analisis periode sebelumnya:
 ### Prasyarat
 
 ```bash
-Python 3.10 atau lebih baru
+Python 3.14.2 (ketika build sistem) atau yang lain yang masih bisa berjalan atau relevan
 ```
 
 ### Instalasi dependensi
 
 ```bash
-pip install pandas openpyxl pillow
+pip install -r Requirements.txt
 ```
 
 ### Jalankan aplikasi
@@ -541,33 +537,10 @@ rumus_slide/   (folder berisi file .png)
 ### Menggunakan `build_app.spec`
 
 ```bash
-pyinstaller build_app.spec
+pyinstaller build_app.spec --clean --noconfirm
 ```
 
-### Menggunakan `main.spec` (minimal)
-
-```bash
-pyinstaller main.spec
-```
-
-### Perintah build manual
-
-```bash
-pyinstaller --onefile --windowed --icon=logo_app.ico ^
-  --add-data "logo_app.png;." ^
-  --add-data "logo_trsp.png;." ^
-  --add-data "inventraabt.png;." ^
-  --add-data "icon_settingan.png;." ^
-  --add-data "icon_drp.png;." ^
-  --add-data "tutorial_upload.png;." ^
-  --add-data "tutorial_mapping.png;." ^
-  --add-data "tutorial_preview.png;." ^
-  --add-data "tutorial_reset.png;." ^
-  --add-data "rumus_slide;rumus_slide" ^
-  main.py
-```
-
-Output `.exe` akan ada di folder `dist/`.
+Output `.exe` akan ada di folder `dist/` auto generate.
 
 **Catatan `resource_path()`:** Semua akses file menggunakan fungsi ini agar path benar baik saat mode development (`.py`) maupun produksi (`.exe`):
 ```python
@@ -626,19 +599,47 @@ File ini dibuat otomatis saat pertama kali aplikasi dijalankan. Berisi dua bagia
 
 ## Dependensi
 
+### Library Bawaan Python (tidak perlu diinstall)
+
+| Library | Fungsi |
+|---------|--------|
+| `tkinter` | GUI framework utama — window, widget, event loop |
+| `urllib` | HTTP GET/POST ke endpoint Google Apps Script |
+| `json` | Baca/tulis konfigurasi `INVENTRA.json` |
+| `threading` | Background thread untuk operasi berat (baca Excel, save, sync) |
+| `re` | Regex untuk ekstraksi dan klasifikasi nomor PRK |
+| `os` / `sys` | Path file dan deteksi mode EXE vs development |
+
+### Library Pihak Ketiga (install via `pip install -r requirements.txt`)
+
 | Library | Versi | Fungsi |
 |---------|-------|--------|
-| `tkinter` | built-in | GUI framework utama |
-| `pandas` | ≥ 1.5 | Pemrosesan data tabular (DataFrame) |
-| `openpyxl` | ≥ 3.0 | Baca/tulis file Excel `.xlsx` dengan styling |
-| `Pillow` | ≥ 9.0 | Memuat dan memanipulasi gambar (logo, ikon, tutorial) |
-| `numpy` | ≥ 1.23 | Operasi array dan `np.select` untuk klasifikasi |
-| `urllib` | built-in | HTTP request ke Google Apps Script Web App |
-| `json` | built-in | Baca/tulis konfigurasi `INVENTRA.json` |
-| `threading` | built-in | Background thread untuk operasi berat |
-| `re` | built-in | Regex untuk ekstraksi dan klasifikasi nomor PRK |
-| `pywinstyles` | opsional | Ubah warna title bar Windows sesuai tema merah |
-| `PyInstaller` | ≥ 5.0 | Build aplikasi menjadi file `.exe` |
+| `pandas` | 3.0.1 | Pemrosesan data tabular — DataFrame, groupby, merge, map, filter |
+| `openpyxl` | 3.1.5 | Baca/tulis file Excel `.xlsx` dengan styling (header, freeze pane, autofilter) |
+| `xlrd` | 2.0.2 | Baca file Excel format `.xls` lama (Excel 97-2003) |
+| `et_xmlfile` | 2.0.0 | Dependensi internal openpyxl |
+| `numpy` | 2.4.2 | Operasi array dan `np.select` untuk klasifikasi ORDER/TIDAK ORDER |
+| `Pillow` | 12.1.1 | Memuat dan memanipulasi gambar PNG/JPG (logo, ikon, tutorial) |
+| `python-dateutil` | 2.9.0.post0 | Utilitas tanggal — dependensi internal pandas |
+| `six` | 1.17.0 | Kompatibilitas Python — dependensi internal |
+| `tzdata` | 2025.3 | Data timezone — dependensi internal pandas |
+| `requests` | 2.32.5 | HTTP request tambahan ke Google Apps Script |
+| `urllib3` | 2.6.3 | Dependensi internal requests |
+| `certifi` | 2026.2.25 | Bundle sertifikat SSL — dependensi internal requests |
+| `charset-normalizer` | 3.4.4 | Deteksi encoding — dependensi internal requests |
+| `idna` | 3.11 | Internasionalisasi nama domain — dependensi internal requests |
+| `pywinstyles` | 1.8 | *(Opsional)* Ubah warna title bar Windows sesuai tema merah INVENTRA |
+
+### Library Build (hanya dibutuhkan saat kompilasi ke `.exe`)
+
+| Library | Versi | Fungsi |
+|---------|-------|--------|
+| `pyinstaller` | 6.19.0 | Kompilasi aplikasi Python menjadi file `.exe` standalone |
+| `pyinstaller-hooks-contrib` | 2026.1 | Koleksi hooks untuk library pihak ketiga di PyInstaller |
+| `altgraph` | 0.17.5 | Analisis dependency graph — dependensi internal PyInstaller |
+| `pefile` | 2024.8.26 | Parser file PE (format binary Windows) — dependensi PyInstaller |
+| `pywin32-ctypes` | 0.2.3 | Windows API binding — dependensi internal PyInstaller |
+| `packaging` | 26.0 | Parsing versi package — dependensi internal PyInstaller |
 
 ---
 

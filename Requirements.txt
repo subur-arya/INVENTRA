@@ -1,0 +1,77 @@
+# ============================================================
+# requirements.txt — INVENTRA 1.7
+# ============================================================
+#
+# Cara install semua dependensi:
+#   pip install -r requirements.txt
+#
+# Cara install di virtual environment (rekomendasi):
+#   python -m venv venv
+#   venv\Scripts\activate        (Windows)
+#   pip install -r requirements.txt
+#
+# Library built-in Python (TIDAK perlu diinstall):
+#   tkinter   — GUI framework utama
+#   urllib    — HTTP request ke Google Apps Script
+#   json      — baca/tulis INVENTRA.json
+#   threading — background thread untuk operasi berat
+#   re        — regex ekstraksi dan klasifikasi nomor PRK
+#   os, sys   — path dan sistem operasi
+# ============================================================
+
+# ── Core Data Processing ─────────────────────────────────────
+
+# Pemrosesan data tabular (DataFrame, groupby, merge, map, filter)
+pandas==3.0.1
+
+# Baca/tulis file Excel .xlsx dengan styling (header berwarna,
+# freeze pane, autofilter, auto-fit kolom, zebra stripes)
+openpyxl==3.1.5
+
+# Baca file Excel format .xls lama (Excel 97-2003)
+xlrd==2.0.2
+
+# Tipe data tambahan yang dibutuhkan openpyxl secara internal
+et_xmlfile==2.0.0
+
+# Operasi array dan np.select untuk klasifikasi ORDER/TIDAK ORDER/PERLU REVIEW
+numpy==2.4.2
+
+# Utilitas tanggal — dipakai pandas secara internal
+python-dateutil==2.9.0.post0
+six==1.17.0
+tzdata==2025.3
+
+# ── Image & GUI Enhancement ──────────────────────────────────
+
+# Memuat dan memanipulasi gambar PNG/JPG untuk logo, ikon, dan tutorial
+# Dibutuhkan Tkinter untuk menampilkan gambar via ImageTk.PhotoImage
+pillow==12.1.1
+
+# ── Windows Title Bar Styling ─────────────────────────────────
+
+# Mengubah warna title bar Windows agar sesuai tema merah INVENTRA.
+# Hanya bekerja di Windows 10 v1809+ dan Windows 11.
+# Aplikasi tetap berjalan normal jika library ini tidak tersedia.
+pywinstyles==1.8
+
+# ── HTTP & Networking ─────────────────────────────────────────
+
+# HTTP request ke endpoint Google Apps Script (sync ke Google Sheets)
+requests==2.32.5
+urllib3==2.6.3
+certifi==2026.2.25
+charset-normalizer==3.4.4
+idna==3.11
+
+# ── Build ke EXE (Opsional) ───────────────────────────────────
+
+# Kompilasi aplikasi menjadi .exe yang bisa dijalankan tanpa Python.
+# Hanya dibutuhkan di mesin developer saat build — tidak perlu di production.
+# Jalankan: pyinstaller build_app.spec
+pyinstaller==6.19.0
+pyinstaller-hooks-contrib==2026.1
+altgraph==0.17.5
+pefile==2024.8.26
+pywin32-ctypes==0.2.3
+packaging==26.0

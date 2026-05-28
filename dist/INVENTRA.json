@@ -1,0 +1,125 @@
+{
+    "uploaded_files": {
+        "file_1": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/INVENTRA_21 April 2026_15-19.xlsx",
+            "size": 4888421,
+            "filename": "INVENTRA_21 April 2026_15-19.xlsx"
+        },
+        "file_2": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PENERIMAAN MATERIAL SRD - 01012024-30042026 (DummyAll).xlsx",
+            "size": 376759,
+            "filename": "PENERIMAAN MATERIAL SRD - 01012024-30042026 (DummyAll).xlsx"
+        },
+        "file_3": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PLJM01 (DummyAll).xlsx",
+            "size": 8157392,
+            "filename": "PLJM01 (DummyAll).xlsx"
+        },
+        "file_4": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PLJM08 (DummyAll).xlsx",
+            "size": 3444238,
+            "filename": "PLJM08 (DummyAll).xlsx"
+        },
+        "file_5": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/PO STOCK -  01012024-30042026 (DummyAll).xlsx",
+            "size": 430587,
+            "filename": "PO STOCK -  01012024-30042026 (DummyAll).xlsx"
+        },
+        "file_6": {
+            "path": "D:/kuliah/semester 6/Magang/Materi Inventory/Data dummy setting rop-roq/SL SOH -  01012024-30042026 (DummyAll).xlsx",
+            "size": 741390,
+            "filename": "SL SOH -  01012024-30042026 (DummyAll).xlsx"
+        }
+    },
+    "data_mappings": {
+        "PLJM01": {
+            "source_file_id": null,
+            "sheet_name": null,
+            "columns": {
+                "stock_code": "Stock Code",
+                "rop": "ROP",
+                "roq": "ROQ"
+            }
+        },
+        "PLJM08": {
+            "source_file_id": null,
+            "sheet_name": null,
+            "columns": {
+                "stock_code": "Stock Code",
+                "item_name": "Item Name",
+                "soh_akhir": "SOH Akhir"
+            }
+        },
+        "SRD": {
+            "source_file_id": null,
+            "sheet_name": null,
+            "columns": {
+                "stock_code": "STOCK_CODE",
+                "qty_rcv_uop": "QTY_RCV_UOP",
+                "creation_date": "CREATION_DATE"
+            }
+        },
+        "SLN": {
+            "source_file_id": null,
+            "sheet_name": null,
+            "columns": {
+                "stock_code": "Stock Code",
+                "qty_req": "Qty Req",
+                "qty_issued": "QTY_ISSUED",
+                "last_acq_date": "Last Acq Date"
+            }
+        },
+        "IR": {
+            "source_file_id": null,
+            "sheet_name": null,
+            "columns": {
+                "stock_code": "Stock Code",
+                "qty_req": "Qty Req",
+                "qty_issued": "QTY_ISSUED",
+                "req_by_date": "Req By Date"
+            }
+        },
+        "PO": {
+            "source_file_id": null,
+            "sheet_name": null,
+            "columns": {
+                "stock_code": "STOCK_CODE",
+                "supplier_name": "SUPPLIER_NAME",
+                "order_date": "ORDER_DATE",
+                "receipt_status": "RECEIPT_STATUS",
+                "qty_rcv_dir": "QTY_RCV_DIR",
+                "curr_qty": "CURR_QTY"
+            }
+        },
+        "LEVERING": {
+            "source_file_id": null,
+            "sheet_name": null,
+            "columns": {
+                "stock_code": "STOCK_CODE",
+                "receipt_status": "RECEIPT_STATUS",
+                "curr_qty_p": "CURR_QTY_P",
+                "due_site_date": "DUE_SITE_DATE"
+            }
+        },
+        "ANALISIS SETTING": {
+            "source_file_id": null,
+            "sheet_name": null,
+            "columns": {
+                "supplier_name": "Supplier Name",
+                "stock_code": "STOCK_CODE",
+                "item_name": "Item Name",
+                "analisis": "Keterangan"
+            }
+        },
+        "ANALISIS NON SETTING": {
+            "source_file_id": null,
+            "sheet_name": null,
+            "columns": {
+                "supplier_name": "Supplier Name",
+                "stock_code": "STOCK_CODE",
+                "item_name": "Item Name",
+                "analisis": "Keterangan"
+            }
+        }
+    }
+}
