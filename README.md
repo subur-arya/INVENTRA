@@ -591,9 +591,9 @@ File ini dibuat otomatis saat pertama kali aplikasi dijalankan. Berisi dua bagia
 }
 ```
 
-**`uploaded_files`** — Daftar file Excel yang pernah diupload. Path disimpan agar saat aplikasi dibuka kembali, file otomatis dimuat ulang.
+**`uploaded_files`** → Daftar file Excel yang pernah diupload. Path disimpan agar saat aplikasi dibuka kembali, file otomatis dimuat ulang.
 
-**`data_mappings`** — Konfigurasi mapping kolom per jenis data. Nilai `columns` berisi pasangan `{field_internal: nama_kolom_di_excel}`.
+**`data_mappings`** → Konfigurasi mapping kolom per jenis data. Nilai `columns` berisi pasangan `{field_internal: nama_kolom_di_excel}`.
 
 ---
 
@@ -603,7 +603,7 @@ File ini dibuat otomatis saat pertama kali aplikasi dijalankan. Berisi dua bagia
 
 | Library | Fungsi |
 |---------|--------|
-| `tkinter` | GUI framework utama — window, widget, event loop |
+| `tkinter` | GUI framework utama window, widget, event loop |
 | `urllib` | HTTP GET/POST ke endpoint Google Apps Script |
 | `json` | Baca/tulis konfigurasi `INVENTRA.json` |
 | `threading` | Background thread untuk operasi berat (baca Excel, save, sync) |
@@ -614,20 +614,20 @@ File ini dibuat otomatis saat pertama kali aplikasi dijalankan. Berisi dua bagia
 
 | Library | Versi | Fungsi |
 |---------|-------|--------|
-| `pandas` | 3.0.1 | Pemrosesan data tabular — DataFrame, groupby, merge, map, filter |
+| `pandas` | 3.0.1 | Pemrosesan data tabular seperti DataFrame, groupby, merge, map, filter |
 | `openpyxl` | 3.1.5 | Baca/tulis file Excel `.xlsx` dengan styling (header, freeze pane, autofilter) |
-| `xlrd` | 2.0.2 | Baca file Excel format `.xls` lama (Excel 97-2003) |
-| `et_xmlfile` | 2.0.0 | Dependensi internal openpyxl |
+| `xlrd` | 2.0.2 | Baca file Excel format `.xls`|
+| `et_xmlfile` | 2.0.0 | (Dependensi internal openpyxl) |
 | `numpy` | 2.4.2 | Operasi array dan `np.select` untuk klasifikasi ORDER/TIDAK ORDER |
 | `Pillow` | 12.1.1 | Memuat dan memanipulasi gambar PNG/JPG (logo, ikon, tutorial) |
-| `python-dateutil` | 2.9.0.post0 | Utilitas tanggal — dependensi internal pandas |
-| `six` | 1.17.0 | Kompatibilitas Python — dependensi internal |
-| `tzdata` | 2025.3 | Data timezone — dependensi internal pandas |
+| `python-dateutil` | 2.9.0.post0 | Utilitas tanggal yaitu (dependensi internal pandas) |
+| `six` | 1.17.0 | Kompatibilitas Python (dependensi internal) |
+| `tzdata` | 2025.3 | Data timezone (dependensi internal pandas) |
 | `requests` | 2.32.5 | HTTP request tambahan ke Google Apps Script |
-| `urllib3` | 2.6.3 | Dependensi internal requests |
-| `certifi` | 2026.2.25 | Bundle sertifikat SSL — dependensi internal requests |
-| `charset-normalizer` | 3.4.4 | Deteksi encoding — dependensi internal requests |
-| `idna` | 3.11 | Internasionalisasi nama domain — dependensi internal requests |
+| `urllib3` | 2.6.3 | (Dependensi internal requests) |
+| `certifi` | 2026.2.25 | Bundle sertifikat SSL (dependensi internal requests) |
+| `charset-normalizer` | 3.4.4 | Deteksi encoding (dependensi internal requests) |
+| `idna` | 3.11 | Internasionalisasi nama domain (dependensi internal requests) |
 | `pywinstyles` | 1.8 | *(Opsional)* Ubah warna title bar Windows sesuai tema merah INVENTRA |
 
 ### Library Build (hanya dibutuhkan saat kompilasi ke `.exe`)
@@ -636,10 +636,10 @@ File ini dibuat otomatis saat pertama kali aplikasi dijalankan. Berisi dua bagia
 |---------|-------|--------|
 | `pyinstaller` | 6.19.0 | Kompilasi aplikasi Python menjadi file `.exe` standalone |
 | `pyinstaller-hooks-contrib` | 2026.1 | Koleksi hooks untuk library pihak ketiga di PyInstaller |
-| `altgraph` | 0.17.5 | Analisis dependency graph — dependensi internal PyInstaller |
-| `pefile` | 2024.8.26 | Parser file PE (format binary Windows) — dependensi PyInstaller |
-| `pywin32-ctypes` | 0.2.3 | Windows API binding — dependensi internal PyInstaller |
-| `packaging` | 26.0 | Parsing versi package — dependensi internal PyInstaller |
+| `altgraph` | 0.17.5 | Analisis dependency graph (dependensi internal PyInstaller) |
+| `pefile` | 2024.8.26 | Parser file PE (format binary Windows) (dependensi PyInstaller) |
+| `pywin32-ctypes` | 0.2.3 | Windows API binding (dependensi internal PyInstaller) |
+| `packaging` | 26.0 | Parsing versi package (dependensi internal PyInstaller) |
 
 ---
 
